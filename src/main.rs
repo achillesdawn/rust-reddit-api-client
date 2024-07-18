@@ -1,6 +1,6 @@
 use api::Post;
 use base64::prelude::*;
-use std::{collections::HashMap, env, error::Error, time::Instant};
+use std::{collections::HashMap, env, time::Instant};
 use thiserror::Error;
 use token::Token;
 
