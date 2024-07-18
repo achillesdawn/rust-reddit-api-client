@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 pub struct Token {
     pub access_token: String,
@@ -16,6 +17,7 @@ fn timestamp_now() -> DateTime<Utc> {
     Utc::now()
 }
 
+#[allow(unused)]
 impl Token {
     pub fn new() -> Self {
         Token {

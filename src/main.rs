@@ -1,12 +1,6 @@
+use api::Post;
 use base64::prelude::*;
-use serde_json::Value;
-use std::{
-    collections::HashMap,
-    env,
-    io::{BufReader, Write},
-    rc::Rc,
-    time::Instant,
-};
+use std::{collections::HashMap, env, error::Error, time::Instant};
 use thiserror::Error;
 use token::Token;
 
@@ -28,8 +22,6 @@ enum RedditAuthError {
 struct Reddit {
     headers: HashMap<String, String>,
     token: Token,
-
-    limit: u32,
     base_url: String,
 }
 
@@ -48,7 +40,6 @@ impl Reddit {
             headers,
             token: Token::new(),
 
-            limit: 100,
             base_url: "https://oauth.reddit.com".to_owned(),
         }
     }
@@ -104,10 +95,12 @@ impl Reddit {
         Ok(())
     }
 
-    fn user_profile(&self, username: &'static str) {
+    fn user_profile(&self, username: &'static str) -> Result<Vec<Post>, RedditAuthError> {
         let url = format!("/user/{username}/submitted");
 
         let full_url = self.base_url.clone() + &url;
+
+        let mut result = Vec::new();
 
         let mut query: HashMap<String, String> = HashMap::from([
             ("limit".to_owned(), "100".to_owned()),
@@ -127,11 +120,11 @@ impl Reddit {
             let res = req
                 .query_pairs(query.iter().map(|(k, v)| (k.as_str(), v.as_str())))
                 .call()
-                .unwrap();
+                .map_err(Box::new)?;
 
-            dbg!(&res);
+            let data: api::ProfileResponse = serde_json::from_reader(res.into_reader())?;
 
-            let data: api::ProfileResponse = serde_json::from_reader(res.into_reader()).unwrap();
+            result.extend(data.data.children.into_iter().map(|child| child.data));
 
             if data.data.after.is_null() {
                 break;
@@ -141,6 +134,8 @@ impl Reddit {
                 query.insert("after".to_owned(), after.clone());
             }
         }
+
+        Ok(result)
     }
 }
 
@@ -150,7 +145,15 @@ fn main() {
     let now = Instant::now();
     let mut r = Reddit::new();
     r.authorize().unwrap();
-    r.user_profile("Avereniect");
+    let posts = match r.user_profile("Avereniect") {
+        Ok(posts) => posts,
+        Err(err) => {
+            dbg!(err);
+            std::process::exit(1);
+        }
+    };
+
+    dbg!(posts);
 
     let done = now.elapsed().as_millis();
     println!("done in {done}ms");
