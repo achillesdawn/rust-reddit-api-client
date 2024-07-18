@@ -1,10 +1,17 @@
 use base64::prelude::*;
-use std::{collections::HashMap, env};
+use serde_json::Value;
+use std::{
+    collections::HashMap,
+    env,
+    io::{BufReader, Write},
+    rc::Rc,
+    time::Instant,
+};
 use thiserror::Error;
 use token::Token;
 
-mod token;
 mod api;
+mod token;
 
 #[derive(Debug, Error)]
 enum RedditAuthError {
@@ -102,40 +109,49 @@ impl Reddit {
 
         let full_url = self.base_url.clone() + &url;
 
-        let mut req = ureq::get(&full_url);
+        let mut query: HashMap<String, String> = HashMap::from([
+            ("limit".to_owned(), "100".to_owned()),
+            ("context".to_owned(), "2".to_owned()),
+            ("show".to_owned(), "given".to_owned()),
+            ("sort".to_owned(), "new".to_owned()),
+            ("t".to_owned(), "all".to_owned()),
+            ("type".to_owned(), "all".to_owned()),
+            ("raw_json".to_owned(), "1".to_owned()),
+        ]);
 
-        req = self.set_headers(req);
+        loop {
+            let mut req = ureq::get(&full_url);
 
-        let query: Vec<(&str, &str)> = vec![
-            ("limit", "100"),
-            ("context", "2"),
-            ("show", "given"),
-            ("sort", "new"),
-            ("t", "all"),
-            ("type", "all"),
-            ("raw_json", "1"),
-        ];
+            req = self.set_headers(req);
 
-        let res = req.query_pairs(query).call().unwrap();
+            let res = req
+                .query_pairs(query.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+                .call()
+                .unwrap();
 
-        dbg!(&res);
+            dbg!(&res);
 
-        let data: api::Profile = serde_json::from_reader(res.into_reader()).unwrap();
+            let data: api::ProfileResponse = serde_json::from_reader(res.into_reader()).unwrap();
 
-        for child in data.data.children {
-            dbg!(child.data);
+            if data.data.after.is_null() {
+                break;
+            } else {
+                dbg!(&data.data.after);
+                let after = data.data.after.as_str().unwrap().to_owned();
+                query.insert("after".to_owned(), after.clone());
+            }
         }
-
-        // let file = std::fs::File::create("result.json").unwrap();
-        
-        // serde_json::to_writer(file, &data).unwrap();
     }
 }
 
 fn main() {
     dotenv::dotenv().ok();
 
+    let now = Instant::now();
     let mut r = Reddit::new();
     r.authorize().unwrap();
-    r.user_profile("username");
+    r.user_profile("Avereniect");
+
+    let done = now.elapsed().as_millis();
+    println!("done in {done}ms");
 }
