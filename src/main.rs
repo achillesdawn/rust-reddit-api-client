@@ -142,9 +142,10 @@ impl Reddit {
 fn main() {
     dotenv::dotenv().ok();
 
-    let now = Instant::now();
+
     let mut r = Reddit::new();
     r.authorize().unwrap();
+
     let posts = match r.user_profile("Avereniect") {
         Ok(posts) => posts,
         Err(err) => {
@@ -153,8 +154,7 @@ fn main() {
         }
     };
 
-    dbg!(posts);
-
-    let done = now.elapsed().as_millis();
-    println!("done in {done}ms");
+    for post in posts {
+        println!("{}", post.author);
+    }
 }
