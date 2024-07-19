@@ -1,6 +1,7 @@
-use api::Post;
+use api::{Post, RedditApiResonse};
 use base64::prelude::*;
-use std::{collections::HashMap, env, time::Instant};
+use serde_json::Value;
+use std::{collections::HashMap, env, fmt::Display, io::Write, time::Instant};
 use thiserror::Error;
 use token::Token;
 
@@ -17,6 +18,32 @@ enum RedditAuthError {
 
     #[error("unexpected response from api")]
     DeserializeError(#[from] serde_json::Error),
+}
+
+enum RedditTime {
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year,
+    All,
+}
+
+impl Display for RedditTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                RedditTime::Hour => "hour",
+                RedditTime::Day => "day",
+                RedditTime::Week => "week",
+                RedditTime::Month => "month",
+                RedditTime::Year => "year",
+                RedditTime::All => "all",
+            }
+        )
+    }
 }
 
 struct Reddit {
@@ -122,7 +149,7 @@ impl Reddit {
                 .call()
                 .map_err(Box::new)?;
 
-            let data: api::ProfileResponse = serde_json::from_reader(res.into_reader())?;
+            let data: api::RedditApiResonse = serde_json::from_reader(res.into_reader())?;
 
             result.extend(data.data.children.into_iter().map(|child| child.data));
 
@@ -137,24 +164,55 @@ impl Reddit {
 
         Ok(result)
     }
+
+    fn subreddit(&self, subreddit_name: &str) -> Result<(), RedditAuthError> {
+        let url = format!("/r/{subreddit_name}/new");
+        let full_url = self.base_url.clone() + &url;
+
+        let mut req = ureq::get(&full_url);
+
+        req = self.set_headers(req);
+
+        let query: HashMap<String, String> = HashMap::from([
+            ("limit".to_owned(), "100".to_owned()),
+            ("show".to_owned(), "all".to_owned()),
+        ]);
+
+        let res = req
+            .query_pairs(query.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+            .call()
+            .map_err(Box::new)?;
+        
+
+        dbg!(&res);
+
+        let data: RedditApiResonse = serde_json::from_reader(res.into_reader()).unwrap();
+
+        dbg!(data);
+
+
+        Ok(())
+    }
 }
 
 fn main() {
     dotenv::dotenv().ok();
 
+    let timer = Instant::now();
 
     let mut r = Reddit::new();
     r.authorize().unwrap();
 
-    let posts = match r.user_profile("Avereniect") {
-        Ok(posts) => posts,
-        Err(err) => {
-            dbg!(err);
-            std::process::exit(1);
-        }
-    };
+    // let posts = match r.user_profile("Avereniect") {
+    //     Ok(posts) => posts,
+    //     Err(err) => {
+    //         dbg!(err);
+    //         std::process::exit(1);
+    //     }
+    // };
 
-    for post in posts {
-        println!("{}", post.author);
-    }
+    r.subreddit("blender").unwrap();
+
+    let timer = timer.elapsed().as_millis();
+    println!("{}ms", timer);
 }

@@ -6,27 +6,37 @@ use serde::Deserialize;
 use serde_json::Value;
 
 #[derive(Debug, Deserialize)]
-pub struct ProfileResponse {
-    pub data: Data,
-    pub kind: String,
+pub enum EndpointType {
+    Listing,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Data {
+pub struct RedditApiResonse {
+    pub data: PagingData,
+    pub kind: EndpointType,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PagingData {
     pub after: Value,
     pub before: Value,
     pub children: Vec<Child>,
-    pub dist: i64,
+    pub dist: u32,
     pub geo_filter: String,
     pub modhash: Value,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Deserialize)]
+pub enum DataType {
+    t3,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Child {
     pub data: Post,
-    pub kind: String,
+    pub kind: DataType,
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct Post {
@@ -61,9 +71,9 @@ pub struct Post {
     pub discussion_type: Value,
     pub distinguished: Value,
     pub domain: String,
-    pub downs: i64,
+    pub downs: u32,
     pub edited: Value,
-    pub gilded: i64,
+    pub gilded: u32,
     // pub gildings: Gildings,
     pub hidden: bool,
     pub hide_score: bool,
@@ -85,8 +95,9 @@ pub struct Post {
     pub link_flair_text_color: Option<String>,
     pub link_flair_type: String,
     pub locked: bool,
-    pub media: Value,
+    pub media: Option<Media>,
     // pub media_embed: MediaEmbed,
+    pub media_metadata: Option<HashMap<String, MediaMetaData>>,
     pub media_only: bool,
     pub mod_note: Value,
     pub mod_reason_by: Value,
@@ -94,24 +105,24 @@ pub struct Post {
     pub mod_reports: Vec<Value>,
     pub name: String,
     pub no_follow: bool,
-    pub num_comments: i64,
-    pub num_crossposts: i64,
+    pub num_comments: u32,
+    pub num_crossposts: u32,
     pub num_reports: Value,
     pub over_18: bool,
-    pub parent_whitelist_status: Value,
+    pub parent_whitelist_status: String,
     pub permalink: String,
     pub pinned: bool,
     pub post_hint: Option<String>,
     pub preview: Option<Preview>,
-    pub pwls: Value,
+    pub pwls: u64,
     pub quarantine: bool,
     pub removal_reason: Value,
     pub removed_by: Value,
     pub removed_by_category: Option<String>,
     pub report_reasons: Value,
     pub saved: bool,
-    pub score: i64,
-    pub secure_media: Value,
+    pub score: u64,
+    pub secure_media: Option<Media>,
     pub secure_media_embed: SecureMediaEmbed,
     pub selftext: String,
     pub selftext_html: Value,
@@ -121,17 +132,17 @@ pub struct Post {
     pub subreddit: String,
     pub subreddit_id: String,
     pub subreddit_name_prefixed: String,
-    pub subreddit_subscribers: i64,
+    pub subreddit_subscribers: u32,
     pub subreddit_type: String,
     pub suggested_sort: Option<String>,
     pub thumbnail: String,
-    pub thumbnail_height: Option<i64>,
-    pub thumbnail_width: Option<i64>,
+    pub thumbnail_height: Option<u32>,
+    pub thumbnail_width: Option<u32>,
     pub title: String,
     pub top_awarded_type: Value,
-    pub total_awards_received: i64,
+    pub total_awards_received: u32,
     pub treatment_tags: Vec<Value>,
-    pub ups: i64,
+    pub ups: u32,
     pub upvote_ratio: f64,
     pub url: String,
     pub url_overridden_by_dest: Option<String>,
@@ -142,12 +153,31 @@ pub struct Post {
     pub wls: Value,
     pub gallery_data: Option<GalleryData>,
     pub is_gallery: Option<bool>,
-    pub media_metadata: Option<HashMap<String, MediaMetaData>>,
 }
 
 // #[derive(Debug, Deserialize)]
 // pub struct MediaEmbed {
 // }
+
+#[derive(Debug, Deserialize)]
+pub struct Media {
+    reddit_video: Option<RedditVideo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RedditVideo {
+    bitrate_kbps: u32,
+    dash_url: String,
+    duration: u32,
+    fallback_url: String,
+    has_audio: bool,
+    height: u16,
+    width: u16,
+    hls_url: String,
+    is_gif: bool,
+    scrubber_media_url: String,
+    transcoding_status: String,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Preview {
@@ -159,22 +189,15 @@ pub struct Preview {
 pub struct Image {
     pub id: String,
     pub resolutions: Vec<Resolution>,
-    pub source: Source,
-    pub variants: Variants,
+    pub source: Resolution,
+    pub variants: Option<Variants>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Resolution {
-    pub height: i64,
+    pub height: u32,
     pub url: String,
-    pub width: i64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Source {
-    pub height: i64,
-    pub url: String,
-    pub width: i64,
+    pub width: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -186,13 +209,13 @@ pub struct Variants {
 #[derive(Debug, Deserialize)]
 pub struct Nsfw {
     pub resolutions: Vec<Resolution>,
-    pub source: Source,
+    pub source: Resolution,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Obfuscated {
     pub resolutions: Vec<Resolution>,
-    pub source: Source,
+    pub source: Resolution,
 }
 
 #[derive(Debug, Deserialize)]
@@ -206,7 +229,7 @@ pub struct GalleryData {
 #[derive(Debug, Deserialize)]
 pub struct Item {
     pub caption: String,
-    pub id: i64,
+    pub id: u32,
     pub media_id: String,
     pub outbound_url: String,
 }
@@ -215,15 +238,15 @@ pub struct Item {
 pub struct MediaMetaData {
     pub e: String,
     pub id: String,
-    pub m: String,
-    pub o: Vec<MediaPreview>,
-    pub p: Vec<MediaPreview>,
-    pub s: MediaPreview,
+    pub m: Option<String>,
+    pub o: Option<Vec<MediaPreview>>,
+    pub p: Option<Vec<MediaPreview>>,
+    pub s: Option<MediaPreview>,
     pub status: String,
 }
 #[derive(Debug, Deserialize)]
 pub struct MediaPreview {
     pub u: String,
-    pub x: i64,
-    pub y: i64,
+    pub x: u32,
+    pub y: u32,
 }
