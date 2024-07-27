@@ -1,9 +1,9 @@
 #![allow(unused)]
-
-use std::collections::HashMap;
-
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
+
+mod enums;
 
 #[derive(Debug, Deserialize)]
 pub enum EndpointType {
@@ -30,6 +30,7 @@ pub struct PagingData {
 #[derive(Debug, Deserialize)]
 pub enum DataType {
     t3,
+    t5,
 }
 
 #[derive(Debug, Deserialize)]
@@ -87,7 +88,7 @@ pub struct Post {
     pub is_self: bool,
     pub is_video: bool,
     pub likes: Value,
-    pub link_flair_background_color: String,
+    pub link_flair_background_color: Option<String>,
     pub link_flair_css_class: Option<String>,
     pub link_flair_richtext: Vec<Value>,
     pub link_flair_template_id: Option<String>,
@@ -109,12 +110,12 @@ pub struct Post {
     pub num_crossposts: u32,
     pub num_reports: Value,
     pub over_18: bool,
-    pub parent_whitelist_status: String,
+    pub parent_whitelist_status: Option<String>,
     pub permalink: String,
     pub pinned: bool,
     pub post_hint: Option<String>,
     pub preview: Option<Preview>,
-    pub pwls: u64,
+    pub pwls: Option<u64>,
     pub quarantine: bool,
     pub removal_reason: Value,
     pub removed_by: Value,
@@ -149,7 +150,7 @@ pub struct Post {
     pub user_reports: Vec<Value>,
     pub view_count: Value,
     pub visited: bool,
-    pub whitelist_status: Value,
+    pub whitelist_status: Option<String>,
     pub wls: Value,
     pub gallery_data: Option<GalleryData>,
     pub is_gallery: Option<bool>,
@@ -228,10 +229,10 @@ pub struct GalleryData {
 
 #[derive(Debug, Deserialize)]
 pub struct Item {
-    pub caption: String,
+    pub caption: Option<String>,
     pub id: u32,
     pub media_id: String,
-    pub outbound_url: String,
+    pub outbound_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -246,7 +247,7 @@ pub struct MediaMetaData {
 }
 #[derive(Debug, Deserialize)]
 pub struct MediaPreview {
-    pub u: String,
+    pub u: Option<String>,
     pub x: u32,
     pub y: u32,
 }
