@@ -4,7 +4,7 @@ use reqwest::{header, Client, IntoUrl, StatusCode};
 use std::{collections::HashMap, env, io::Write, path::PathBuf, str::FromStr};
 
 use crate::{
-    api::{Post, RedditApiResonse},
+    api::{Post, Profile, RedditApiResonse},
     token::{self, Token},
 };
 
@@ -99,7 +99,7 @@ impl Reddit {
         Ok(())
     }
 
-    pub async fn subreddit(&self, subreddit_name: &str) -> Result<RedditApiResonse, RedditError> {
+    pub async fn subreddit(&self, subreddit_name: &str) -> Result<RedditApiResonse<Post>, RedditError> {
         let url = format!("/r/{subreddit_name}/new");
         let full_url = self.base_url.clone() + &url;
 
@@ -118,7 +118,7 @@ impl Reddit {
 
         let bytes = res.bytes().await.unwrap();
 
-        let data: RedditApiResonse = serde_json::from_reader(bytes.as_ref())?;
+        let data: RedditApiResonse<Post> = serde_json::from_reader(bytes.as_ref())?;
 
         Ok(data)
     }
@@ -153,7 +153,7 @@ impl Reddit {
 
             let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
 
-            let data: RedditApiResonse = match serde_path_to_error::deserialize(deserializer) {
+            let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer) {
                 Ok(data) => data,
                 Err(err) => {
                     dbg!(&err);
@@ -177,7 +177,7 @@ impl Reddit {
         Ok(result)
     }
 
-    pub async fn following(&self) -> Result<(), RedditError> {
+    pub async fn following(&self) -> Result<RedditApiResonse<Profile>, RedditError> {
         let url = format!("/subreddits/mine/subscriber");
         let full_url = self.base_url.clone() + &url;
 
@@ -194,16 +194,22 @@ impl Reddit {
             .await
             .map_err(Box::new)?;
 
-        dbg!(&res);
-
         let bytes = res.bytes().await.unwrap();
 
-        let data: serde_json::Value = serde_json::from_reader(bytes.as_ref()).unwrap();
-        let file = std::fs::File::create("result.json").unwrap();
+        let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
 
-        serde_json::to_writer(file, &data).unwrap();
+        let data: RedditApiResonse<Profile> = match serde_path_to_error::deserialize(deserializer) {
+            Ok(data) => data,
+            Err(err) => {
+                dbg!(&err);
+                let path = err.path().to_string();
+                dbg!(path);
+                return Err(RedditError::NoEnvVariables);
+            }
+        };
+        
 
-        Ok(())
+        Ok(data)
     }
 }
 

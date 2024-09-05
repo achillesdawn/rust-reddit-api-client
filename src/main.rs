@@ -5,7 +5,7 @@ mod token;
 use async_client::Reddit;
 
 fn main() {
-    dotenv::from_filename(".env").unwrap();
+    dotenv::from_filename("ghost.env").unwrap();
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -16,41 +16,30 @@ fn main() {
             reddit.authorize().await.unwrap();
             // reddit.subreddit("blender").await.unwrap();
 
-            let followers = vec![
-                "AskEconomics",
-                "econmonitor",
-                "Economics",
-                "economy",
-                "finance",
-                "GameDeals",
-            ];
+            let following = reddit.following().await.unwrap();
 
-            let followers: Vec<&str> = followers
-                .into_iter()
-                .filter(|item| item.starts_with("u/"))
-                .map(|item| item.split_once("u/").unwrap().1)
-                .collect();
-            dbg!(&followers);
+            dbg!(following);
 
-            let mut join_set = tokio::task::JoinSet::new();
 
-            for follower in followers {
-                println!("getting {}", follower);
-                let posts = match reddit.user_profile(follower.to_owned()).await {
-                    Ok(posts) => posts,
-                    Err(err) => {
-                        dbg!(err);
-                        continue;
-                    },
-                };
+            // let mut join_set = tokio::task::JoinSet::new();
 
-                for post in posts {
-                    join_set.spawn(async_client::get_post_images(post));
-                }
-            }
+            // for follower in followers {
+            //     println!("getting {}", follower);
+            //     let posts = match reddit.user_profile(follower.to_owned()).await {
+            //         Ok(posts) => posts,
+            //         Err(err) => {
+            //             dbg!(err);
+            //             continue;
+            //         }
+            //     };
 
-            while let Some(res) = join_set.join_next().await {
-                dbg!(res);
-            }
+            //     for post in posts {
+            //         join_set.spawn(async_client::get_post_images(post));
+            //     }
+            // }
+
+            // while let Some(res) = join_set.join_next().await {
+            //     dbg!(res);
+            // }
         });
 }

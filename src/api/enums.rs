@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use serde::Deserialize;
+
 enum RedditTime {
     Hour,
     Day,
@@ -24,4 +26,11 @@ impl Display for RedditTime {
             }
         )
     }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Deserialize)]
+pub enum DataType {
+    t3,
+    t5,
 }
