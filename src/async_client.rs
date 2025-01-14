@@ -12,6 +12,8 @@ pub struct Reddit {
     token: Token,
     base_url: String,
     client: Client,
+
+    timer: tokio::time::Interval,
 }
 
 impl Reddit {
@@ -22,10 +24,15 @@ impl Reddit {
             .build()
             .unwrap();
 
+        let period = std::time::Duration::from_secs_f32(1. / 100.);
+
+        let timer = tokio::time::interval(period);
+
         Reddit {
             token: Token::new(),
             client,
             base_url: "https://oauth.reddit.com".to_owned(),
+            timer,
         }
     }
 
@@ -99,7 +106,10 @@ impl Reddit {
         Ok(())
     }
 
-    pub async fn subreddit(&self, subreddit_name: &str) -> Result<RedditApiResonse<Post>, RedditError> {
+    pub async fn subreddit(
+        &self,
+        subreddit_name: &str,
+    ) -> Result<RedditApiResonse<Post>, RedditError> {
         let url = format!("/r/{subreddit_name}/new");
         let full_url = self.base_url.clone() + &url;
 
@@ -123,21 +133,139 @@ impl Reddit {
         Ok(data)
     }
 
-    pub async fn user_profile(&self, username: String) -> Result<Vec<Post>, RedditError> {
+    pub async fn user_profile_latest(
+        &mut self,
+        username: String,
+    ) -> Result<Vec<Post>, RedditError> {
         let url = format!("/user/{username}/submitted");
 
         let full_url = self.base_url.clone() + &url;
 
-        let mut result = Vec::new();
+        let mut posts = Vec::new();
+
+        let query: HashMap<String, String> = HashMap::from([
+            ("limit".to_owned(), "100".to_owned()),
+            ("context".to_owned(), "2".to_owned()),
+            ("show".to_owned(), "given".to_owned()),
+            ("sort".to_owned(), "new".to_owned()),
+            ("t".to_owned(), "links".to_owned()),
+            ("type".to_owned(), "all".to_owned()),
+            ("raw_json".to_owned(), "1".to_owned()),
+        ]);
+
+        self.timer.tick().await;
+
+        let res = self
+            .client
+            .get(full_url.clone())
+            .query(&query)
+            .send()
+            .await
+            .map_err(Box::new)?;
+
+        if res.status() != StatusCode::OK {
+            let bytes = res.bytes().await.unwrap();
+            let raw = std::str::from_utf8(&bytes).unwrap();
+            dbg!(raw);
+            return Err(RedditError::Unauthorized);
+        }
+
+        let bytes = res.bytes().await.unwrap();
+
+        let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
+
+        let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer) {
+            Ok(data) => data,
+            Err(err) => {
+                dbg!(&err);
+                let raw = std::str::from_utf8(&bytes).unwrap();
+                dbg!(raw);
+                let path = err.path().to_string();
+                dbg!(path);
+                return Err(RedditError::NoEnvVariables);
+            }
+        };
+
+        posts.extend(data.data.children.into_iter().map(|child| child.data));
+
+        Ok(posts)
+    }
+
+    pub async fn user_profile(&mut self, username: String) -> Result<Vec<Post>, RedditError> {
+        let url = format!("/user/{username}/submitted");
+
+        let full_url = self.base_url.clone() + &url;
+
+        let mut posts = Vec::new();
 
         let mut query: HashMap<String, String> = HashMap::from([
             ("limit".to_owned(), "100".to_owned()),
             ("context".to_owned(), "2".to_owned()),
             ("show".to_owned(), "given".to_owned()),
             ("sort".to_owned(), "new".to_owned()),
-            ("t".to_owned(), "all".to_owned()),
+            ("t".to_owned(), "links".to_owned()),
             ("type".to_owned(), "all".to_owned()),
             ("raw_json".to_owned(), "1".to_owned()),
+        ]);
+
+        loop {
+            self.timer.tick().await;
+
+            let res = self
+                .client
+                .get(full_url.clone())
+                .query(&query)
+                .send()
+                .await
+                .map_err(Box::new)?;
+
+            if res.status() != StatusCode::OK {
+                let bytes = res.bytes().await.unwrap();
+                let raw = std::str::from_utf8(&bytes).unwrap();
+                dbg!(raw);
+                return Err(RedditError::Unauthorized);
+            }
+
+            let bytes = res.bytes().await.unwrap();
+
+            let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
+
+            let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer)
+            {
+                Ok(data) => data,
+                Err(err) => {
+                    dbg!(&err);
+                    let raw = std::str::from_utf8(&bytes).unwrap();
+                    dbg!(raw);
+                    let path = err.path().to_string();
+                    dbg!(path);
+                    return Err(RedditError::NoEnvVariables);
+                }
+            };
+
+            posts.extend(data.data.children.into_iter().map(|child| child.data));
+
+            if data.data.after.is_null() {
+                break;
+            } else {
+                dbg!(&data.data.after);
+                let after = data.data.after.as_str().unwrap().to_owned();
+                query.insert("after".to_owned(), after.clone());
+            }
+        }
+
+        Ok(posts)
+    }
+
+    pub async fn following(&self) -> Result<Vec<Profile>, RedditError> {
+        let url = format!("/subreddits/mine/subscriber");
+        let full_url = self.base_url.clone() + &url;
+
+        let mut results = Vec::new();
+
+        let mut query: HashMap<String, String> = HashMap::from([
+            ("limit".to_owned(), "100".to_owned()),
+            ("show".to_owned(), "all".to_owned()),
         ]);
 
         loop {
@@ -153,69 +281,34 @@ impl Reddit {
 
             let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
 
-            let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer) {
-                Ok(data) => data,
-                Err(err) => {
-                    dbg!(&err);
-                    let path = err.path().to_string();
-                    dbg!(path);
-                    return Err(RedditError::NoEnvVariables);
-                }
-            };
+            let data: RedditApiResonse<Profile> =
+                match serde_path_to_error::deserialize(deserializer) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        dbg!(&err);
+                        let path = err.path().to_string();
+                        dbg!(path);
+                        return Err(RedditError::NoEnvVariables);
+                    }
+                };
 
-            result.extend(data.data.children.into_iter().map(|child| child.data));
+            results.extend(data.data.children.into_iter().map(|child| child.data));
 
             if data.data.after.is_null() {
                 break;
             } else {
-                dbg!(&data.data.after);
                 let after = data.data.after.as_str().unwrap().to_owned();
                 query.insert("after".to_owned(), after.clone());
             }
         }
 
-        Ok(result)
-    }
-
-    pub async fn following(&self) -> Result<RedditApiResonse<Profile>, RedditError> {
-        let url = format!("/subreddits/mine/subscriber");
-        let full_url = self.base_url.clone() + &url;
-
-        let query: HashMap<String, String> = HashMap::from([
-            ("limit".to_owned(), "100".to_owned()),
-            ("show".to_owned(), "all".to_owned()),
-        ]);
-
-        let res = self
-            .client
-            .get(full_url)
-            .query(&query)
-            .send()
-            .await
-            .map_err(Box::new)?;
-
-        let bytes = res.bytes().await.unwrap();
-
-        let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
-
-        let data: RedditApiResonse<Profile> = match serde_path_to_error::deserialize(deserializer) {
-            Ok(data) => data,
-            Err(err) => {
-                dbg!(&err);
-                let path = err.path().to_string();
-                dbg!(path);
-                return Err(RedditError::NoEnvVariables);
-            }
-        };
-        
-
-        Ok(data)
+        Ok(results)
     }
 }
 
 async fn download(url: impl IntoUrl, path: PathBuf) {
     if path.exists() {
-        return
+        return;
     }
 
     let res = reqwest::get(url).await.unwrap();
@@ -237,7 +330,9 @@ pub async fn get_post_images(post: Post) {
         output_dir.push(&post.title);
     }
 
-    if !output_dir.exists() {
+    if output_dir.exists() {
+        return;
+    } else {
         match std::fs::create_dir_all(&output_dir) {
             Ok(_) => {}
             Err(err) => {

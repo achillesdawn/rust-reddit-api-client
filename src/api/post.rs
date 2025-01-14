@@ -131,10 +131,11 @@ pub struct Media {
 
 #[derive(Debug, Deserialize)]
 pub struct RedditVideo {
-    bitrate_kbps: u32,
+    bitrate_kbps: Option<u32>,
     dash_url: String,
     duration: u32,
     fallback_url: String,
+    #[serde(default)]
     has_audio: bool,
     height: u16,
     width: u16,
@@ -201,8 +202,8 @@ pub struct Item {
 
 #[derive(Debug, Deserialize)]
 pub struct MediaMetaData {
-    pub e: String,
-    pub id: String,
+    pub e: Option<String>,
+    pub id: Option<String>,
     pub m: Option<String>,
     pub o: Option<Vec<MediaPreview>>,
     pub p: Option<Vec<MediaPreview>>,
