@@ -8,6 +8,11 @@ struct Media {
 }
 
 async fn download(url: String, path: PathBuf) {
+
+    if path.exists() {
+        return
+    }
+    
     println!("{}->{:?}", url, path);
 
     let res = reqwest::get(url).await.unwrap();
