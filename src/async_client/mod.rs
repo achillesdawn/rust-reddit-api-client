@@ -1,12 +1,16 @@
 use base64::prelude::*;
 use reddit::RedditError;
-use reqwest::{header, Client, IntoUrl, StatusCode};
-use std::{collections::HashMap, env, io::Write, path::PathBuf, str::FromStr};
+use reqwest::{header, Client, StatusCode};
+use std::{collections::HashMap, env};
 
 use crate::{
     api::{Post, Profile, RedditApiResonse},
     token::{self, Token},
 };
+
+mod download;
+
+pub use download::get_post_images;
 
 pub struct Reddit {
     token: Token,
@@ -172,6 +176,9 @@ impl Reddit {
 
         let bytes = res.bytes().await.unwrap();
 
+        // let mut file = std::fs::File::create("test.json").unwrap();
+        // file.write_all(bytes.as_ref()).unwrap();
+
         let deserializer = &mut serde_json::Deserializer::from_reader(bytes.as_ref());
 
         let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer) {
@@ -303,81 +310,5 @@ impl Reddit {
         }
 
         Ok(results)
-    }
-}
-
-async fn download(url: impl IntoUrl, path: PathBuf) {
-    if path.exists() {
-        return;
-    }
-
-    let res = reqwest::get(url).await.unwrap();
-    let bytes = res.bytes().await.unwrap();
-
-    let mut file = std::fs::File::create(path).unwrap();
-    file.write_all(&bytes).unwrap();
-}
-
-pub async fn get_post_images(post: Post) {
-    let output_dir = PathBuf::from_str("assets").unwrap();
-    let mut output_dir = std::path::absolute(output_dir).unwrap();
-
-    output_dir.push(&post.author);
-    if post.title.len() > 255 {
-        let name: String = post.title.chars().take(200).collect();
-        output_dir.push(name);
-    } else {
-        output_dir.push(&post.title);
-    }
-
-    if output_dir.exists() {
-        return;
-    } else {
-        match std::fs::create_dir_all(&output_dir) {
-            Ok(_) => {}
-            Err(err) => {
-                dbg!(&output_dir);
-                dbg!(&err);
-            }
-        };
-    }
-
-    let mut join_set = tokio::task::JoinSet::new();
-
-    if let Some(metadata) = post.media_metadata {
-        for (key, value) in metadata.into_iter() {
-            let mut image_path = output_dir.clone();
-            image_path.push(key);
-
-            if value.o.is_none() {
-                continue;
-            }
-
-            let image = value.s.as_ref().unwrap();
-
-            if image.u.is_none() {
-                continue;
-            }
-            let url = image.u.as_ref().unwrap().clone();
-            join_set.spawn(download(url, image_path));
-        }
-    }
-
-    if let Some(preview) = post.preview {
-        for image in preview.images {
-            let image_name = image.source.url.rsplit_once("/").unwrap().1;
-            let image_name = image_name.split_once("?").unwrap().0;
-
-            let mut image_path = output_dir.clone();
-            image_path.push(image_name);
-
-            join_set.spawn(download(image.source.url, image_path));
-        }
-    }
-
-    while let Some(res) = join_set.join_next().await {
-        if res.is_err() {
-            dbg!(res.err());
-        }
     }
 }

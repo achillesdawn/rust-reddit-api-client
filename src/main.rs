@@ -24,7 +24,7 @@ async fn get_posts() {
 
         println!("getting {}", follower);
 
-        let posts = match reddit.user_profile_latest(follower.to_owned()).await {
+        let posts = match reddit.user_profile(follower.to_owned()).await {
             Ok(posts) => posts,
             Err(err) => {
                 dbg!(err);
@@ -78,6 +78,31 @@ async fn related_subreddits() {
     }
 }
 
+async fn user_profile() {
+    let mut reddit = Reddit::new();
+    reddit.authorize().await.unwrap();
+
+    let posts = match reddit.user_profile_latest("lilclemmie".to_owned()).await {
+        Ok(posts) => posts,
+        Err(err) => {
+            dbg!(err);
+            return;
+        }
+    };
+
+    let mut join_set = tokio::task::JoinSet::new();
+
+    for post in posts {
+        join_set.spawn(async_client::get_post_images(post));
+    }
+
+    while let Some(res) = join_set.join_next().await {
+        if res.is_err() {
+            dbg!(res.err());
+        }
+    }
+}
+
 fn main() {
     dotenv::from_filename("ghost.env").unwrap();
 
@@ -85,5 +110,8 @@ fn main() {
         .enable_all()
         .build()
         .unwrap()
-        .block_on(get_posts());
+        .block_on(
+            get_posts()
+            // user_profile(),
+        );
 }

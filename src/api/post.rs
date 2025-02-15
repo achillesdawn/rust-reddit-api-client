@@ -126,23 +126,25 @@ pub struct Post {
 
 #[derive(Debug, Deserialize)]
 pub struct Media {
-    reddit_video: Option<RedditVideo>,
+    pub reddit_video: Option<RedditVideo>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RedditVideo {
-    bitrate_kbps: Option<u32>,
-    dash_url: String,
-    duration: u32,
-    fallback_url: String,
+    pub bitrate_kbps: Option<u32>,
+    pub dash_url: String,
+    pub duration: u32,
+    pub fallback_url: String,
+
     #[serde(default)]
-    has_audio: bool,
-    height: u16,
-    width: u16,
-    hls_url: String,
-    is_gif: bool,
-    scrubber_media_url: String,
-    transcoding_status: String,
+    pub has_audio: bool,
+    
+    pub height: u16,
+    pub width: u16,
+    pub hls_url: String,
+    pub is_gif: bool,
+    pub scrubber_media_url: String,
+    pub transcoding_status: String,
 }
 
 #[derive(Debug, Deserialize)]
