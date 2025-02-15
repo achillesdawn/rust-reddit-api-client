@@ -24,7 +24,7 @@ async fn get_posts() {
 
         println!("getting {}", follower);
 
-        let posts = match reddit.user_profile(follower.to_owned()).await {
+        let posts = match reddit.user_profile_latest(follower.to_owned()).await {
             Ok(posts) => posts,
             Err(err) => {
                 dbg!(err);
@@ -82,7 +82,7 @@ async fn user_profile() {
     let mut reddit = Reddit::new();
     reddit.authorize().await.unwrap();
 
-    let posts = match reddit.user_profile_latest("lilclemmie".to_owned()).await {
+    let posts = match reddit.user_profile_latest("Individual_Air_5532".to_owned()).await {
         Ok(posts) => posts,
         Err(err) => {
             dbg!(err);

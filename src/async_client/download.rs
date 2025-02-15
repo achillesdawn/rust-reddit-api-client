@@ -1,7 +1,5 @@
 use std::{io::Write, path::PathBuf, str::FromStr};
 
-use reqwest::IntoUrl;
-
 use crate::api::Post;
 
 struct Media {
@@ -9,7 +7,9 @@ struct Media {
     extension: String,
 }
 
-async fn download(url: impl IntoUrl, path: PathBuf) {
+async fn download(url: String, path: PathBuf) {
+    println!("{}->{:?}", url, path);
+
     let res = reqwest::get(url).await.unwrap();
     let bytes = res.bytes().await.unwrap();
 
@@ -17,39 +17,39 @@ async fn download(url: impl IntoUrl, path: PathBuf) {
     file.write_all(&bytes).unwrap();
 }
 
-pub async fn get_post_images(post: Post) {
+fn prepare_output_path(post: &Post) -> (PathBuf, bool) {
     let output_dir = PathBuf::from_str("assets").unwrap();
-    let mut output_dir = std::path::absolute(output_dir).unwrap();
+    let mut output_path = std::path::absolute(output_dir).unwrap();
 
-    output_dir.push(&post.author);
+    output_path.push(&post.author);
     if post.title.len() > 255 {
         let name: String = post.title.chars().take(200).collect();
-        output_dir.push(name);
+        output_path.push(name);
     } else {
-        output_dir.push(&post.title);
+        output_path.push(&post.title);
     }
 
-    if output_dir.exists() {
-        // return;
+    let mut exists = false;
+
+    if output_path.exists() {
+        exists = true;
     } else {
-        match std::fs::create_dir_all(&output_dir) {
+        match std::fs::create_dir_all(&output_path) {
             Ok(_) => {}
             Err(err) => {
-                dbg!(&output_dir);
+                dbg!(&output_path);
                 dbg!(&err);
             }
         };
     }
 
-    dbg!(&post.title);
+    (output_path, exists)
+}
+
+pub async fn get_post_images(post: Post) {
+    let (output_path, _exists) = prepare_output_path(&post);
 
     let mut join_set = tokio::task::JoinSet::new();
-
-    if let Some(gallery) = post.gallery_data {
-        for item in gallery.items {
-            item.media_id;
-        }
-    }
 
     let mut media: Vec<Media> = Vec::new();
 
@@ -59,38 +59,48 @@ pub async fn get_post_images(post: Post) {
                 continue;
             };
 
-            if media_type.contains("gif") {
-                media.push(Media {
-                    id,
-                    extension: "gif".to_owned(),
-                });
-            } else if media_type.contains("jpg") {
-                if let Some(source) = media_meta.s.and_then(|item| item.u) {
-                    let mut image_path = output_dir.clone();
-                    image_path.push(&id);
-                    let image_path = image_path.with_extension("jpg");
+            let extension: &str;
 
-                    join_set.spawn(download(source, image_path));
-                }
-            } else if media_type.contains("png") {
-                if let Some(source) = media_meta.s.and_then(|item| item.u) {
-                    let mut image_path = output_dir.clone();
-                    image_path.push(&id);
-                    let image_path = image_path.with_extension("png");
+            match media_type {
+                x if x.contains("gif") => {
+                    media.push(Media {
+                        id,
+                        extension: "gif".to_owned(),
+                    });
 
-                    join_set.spawn(download(source, image_path));
+                    continue;
                 }
-            } else {
-                let message = format!("unhandled media type: {}", media_type);
-                dbg!(message);
-                panic!("unhandled media type");
+                x if x.contains("jpg") => {
+                    extension = "jpg";
+                }
+                x if x.contains("png") => {
+                    extension = "png";
+                }
+                _ => {
+                    let message = format!("unhandled media type: {}", media_type);
+                    dbg!(message);
+                    panic!("unhandled media type");
+                }
             }
+
+            let Some(source) = media_meta.s.and_then(|item| item.u) else {
+                continue;
+            };
+
+            let image_path = output_path.join(&id);
+            let image_path = image_path.with_extension(extension);
+
+            join_set.spawn(download(source, image_path));
+        }
+    } else if let Some(preview) = post.preview {
+        for image in preview.images {
+            let image_path = output_path.join(&image.id);
+            join_set.spawn(download(image.source.url, image_path));
         }
     }
 
     for media in media.into_iter() {
-        let mut image_path = output_dir.clone();
-        image_path.push(&media.id);
+        let image_path = output_path.join(&media.id);
 
         let url = format!("https://i.redd.it/{}.{}", media.id, media.extension);
 
@@ -105,11 +115,8 @@ pub async fn get_post_images(post: Post) {
     }
 
     if let Some(video) = post.media.and_then(|m| m.reddit_video) {
-        dbg!(&video);
-        let mut video_path = output_dir.clone();
-        video_path.push(output_dir.with_extension(".mp4").file_name().unwrap());
-
-        dbg!(&video_path);
+        let mut video_path = output_path.clone();
+        video_path.push(output_path.with_extension(".mp4").file_name().unwrap());
 
         if !video_path.exists() {
             join_set.spawn(download(video.fallback_url, video_path));
