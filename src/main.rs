@@ -5,7 +5,7 @@ mod token;
 use std::collections::HashMap;
 
 use async_client::Reddit;
-use tracing::{Level, info, warn};
+use tracing::{Level, error, info, warn};
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn get_posts() {
@@ -33,7 +33,7 @@ async fn get_posts() {
         let posts = match reddit.user_profile_latest(user.to_owned()).await {
             Ok(posts) => posts,
             Err(err) => {
-                dbg!(err);
+                error!(?err);
                 continue;
             }
         };
@@ -57,7 +57,9 @@ async fn get_posts() {
             }
         }
 
-        info!(user, downloaded, "done");
+        if downloaded > 0 {
+            info!(user, downloaded, "done");
+        }
     }
 
     info!("DONE")

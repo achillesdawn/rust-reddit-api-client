@@ -9,6 +9,7 @@ use crate::{
 };
 
 mod download;
+mod image_client;
 
 pub use download::get_post_images;
 

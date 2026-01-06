@@ -1,10 +1,13 @@
-use std::{io::Write, path::PathBuf, str::FromStr};
+use std::{io::Write, path::PathBuf, str::FromStr, sync::Arc};
 
 use eyre::Context;
 use tracing::{debug, error};
 
 use crate::api::Post;
 
+use super::image_client::ImageClient;
+
+#[derive(Debug)]
 struct Media {
     id: String,
     extension: String,
@@ -73,6 +76,8 @@ pub async fn get_post_images(post: Post) -> u32 {
 
     let mut downloaded = 0u32;
 
+    let image_client = Arc::new(ImageClient::new());
+
     if let Some(metadata) = post.media_metadata {
         for (_, media_meta) in metadata.into_iter() {
             let (Some(media_type), Some(id)) = (media_meta.m, media_meta.id) else {
@@ -104,17 +109,26 @@ pub async fn get_post_images(post: Post) -> u32 {
             let image_path = output_path.join(&id);
             let image_path = image_path.with_extension(extension);
 
-            join_set.spawn(download(source, image_path));
+            let client_clone = image_client.clone();
+
+            join_set.spawn(async move { client_clone.download(source, image_path).await });
         }
     } else if let Some(preview) = post.preview {
+        dbg!(&preview);
+
         for image in preview.images {
             let image_path = output_path.join(&image.id);
 
-            join_set.spawn(download(image.source.url, image_path));
+            let client_clone = image_client.clone();
+
+            join_set
+                .spawn(async move { client_clone.download(image.source.url, image_path).await });
         }
     }
 
     for media in media.into_iter() {
+        dbg!(&media);
+
         let image_path = output_path.join(&media.id);
 
         let url = format!("https://i.redd.it/{}.{}", media.id, media.extension);
