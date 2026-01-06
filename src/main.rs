@@ -10,23 +10,27 @@ use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::Subscriber
 
 async fn get_posts() {
     let mut reddit = Reddit::new();
+
     reddit.authorize().await.unwrap();
 
     info!("authorized");
     // reddit.subreddit("blender").await.unwrap();
 
-    let profiles = reddit.following().await.unwrap();
+    let mut profiles = reddit.following().await.unwrap();
 
-    let mut join_set = tokio::task::JoinSet::new();
+    profiles.sort_by(|a, b| b.created.total_cmp(&a.created));
 
     for profile in profiles {
         if !profile.display_name.starts_with("u_") {
+            warn!(profile = profile.display_name, "skipping");
             continue;
         }
 
-        let follower = &profile.display_name[2..];
+        let user = &profile.display_name[2..];
 
-        let posts = match reddit.user_profile_latest(follower.to_owned()).await {
+        let mut downloaded = 0u32;
+
+        let posts = match reddit.user_profile_latest(user.to_owned()).await {
             Ok(posts) => posts,
             Err(err) => {
                 dbg!(err);
@@ -34,22 +38,26 @@ async fn get_posts() {
             }
         };
 
-        info!(follower, num_posts = posts.len());
+        info!(user, num_posts = posts.len());
 
         if posts.is_empty() {
-            warn!(follower, "NO POSTS");
+            warn!(user, "NO POSTS");
             continue;
         }
+
+        let mut join_set = tokio::task::JoinSet::new();
 
         for post in posts {
             join_set.spawn(async_client::get_post_images(post));
         }
-    }
 
-    while let Some(res) = join_set.join_next().await {
-        if res.is_err() {
-            dbg!(res.err());
+        while let Some(res) = join_set.join_next().await {
+            if let Ok(downloads) = res {
+                downloaded += downloads;
+            }
         }
+
+        info!(user, downloaded, "done");
     }
 
     info!("DONE")
@@ -111,7 +119,7 @@ async fn user_profile() {
 }
 
 fn init_tracing() {
-    let target = Targets::new().with_target(env!("CARGO_PKG_NAME"), Level::DEBUG);
+    let target = Targets::new().with_target(env!("CARGO_PKG_NAME"), Level::INFO);
 
     let timer = tracing_subscriber::fmt::time::ChronoLocal::new("%H:%M:%S%.3f".to_owned());
 

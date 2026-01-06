@@ -1,5 +1,8 @@
 use std::{io::Write, path::PathBuf, str::FromStr};
 
+use eyre::Context;
+use tracing::{debug, error};
+
 use crate::api::Post;
 
 struct Media {
@@ -7,18 +10,24 @@ struct Media {
     extension: String,
 }
 
-async fn download(url: String, path: PathBuf) {
+async fn download(url: String, path: PathBuf) -> eyre::Result<bool> {
     if path.exists() {
-        return;
+        return Ok(false);
     }
+    debug!(?url, ?path);
 
-    println!("{}->{:?}", url, path);
+    let res = reqwest::get(url).await.wrap_err("could not get url")?;
 
-    let res = reqwest::get(url).await.unwrap();
-    let bytes = res.bytes().await.unwrap();
+    let bytes = res
+        .bytes()
+        .await
+        .wrap_err("could not read response bytes")?;
 
-    let mut file = std::fs::File::create(path).unwrap();
-    file.write_all(&bytes).unwrap();
+    let mut file = std::fs::File::create(path).wrap_err("could not create file")?;
+
+    file.write_all(&bytes).wrap_err("could not write to file")?;
+
+    Ok(true)
 }
 
 fn prepare_output_path(post: &Post) -> (PathBuf, bool) {
@@ -55,12 +64,14 @@ fn prepare_output_path(post: &Post) -> (PathBuf, bool) {
     (output_path, exists)
 }
 
-pub async fn get_post_images(post: Post) {
+pub async fn get_post_images(post: Post) -> u32 {
     let (output_path, _exists) = prepare_output_path(&post);
 
     let mut join_set = tokio::task::JoinSet::new();
 
     let mut media: Vec<Media> = Vec::new();
+
+    let mut downloaded = 0u32;
 
     if let Some(metadata) = post.media_metadata {
         for (_, media_meta) in metadata.into_iter() {
@@ -98,6 +109,7 @@ pub async fn get_post_images(post: Post) {
     } else if let Some(preview) = post.preview {
         for image in preview.images {
             let image_path = output_path.join(&image.id);
+
             join_set.spawn(download(image.source.url, image_path));
         }
     }
@@ -112,8 +124,6 @@ pub async fn get_post_images(post: Post) {
             continue;
         }
 
-        println!("{} -> {:?}", url, image_path);
-
         join_set.spawn(download(url, image_path));
     }
 
@@ -127,8 +137,26 @@ pub async fn get_post_images(post: Post) {
     }
 
     while let Some(res) = join_set.join_next().await {
-        if res.is_err() {
-            dbg!(res.err());
+        let r = match res {
+            Ok(i) => i,
+            Err(err) => {
+                error!(?err, "join error");
+                continue;
+            }
+        };
+
+        let success = match r {
+            Ok(s) => s,
+            Err(err) => {
+                error!(?err, "download error");
+                continue;
+            }
+        };
+
+        if success {
+            downloaded += 1;
         }
     }
+
+    downloaded
 }
