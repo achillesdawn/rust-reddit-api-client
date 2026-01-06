@@ -5,10 +5,14 @@ mod token;
 use std::collections::HashMap;
 
 use async_client::Reddit;
+use tracing::{Level, info, warn};
+use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn get_posts() {
     let mut reddit = Reddit::new();
     reddit.authorize().await.unwrap();
+
+    info!("authorized");
     // reddit.subreddit("blender").await.unwrap();
 
     let profiles = reddit.following().await.unwrap();
@@ -22,8 +26,6 @@ async fn get_posts() {
 
         let follower = &profile.display_name[2..];
 
-        println!("getting {}", follower);
-
         let posts = match reddit.user_profile_latest(follower.to_owned()).await {
             Ok(posts) => posts,
             Err(err) => {
@@ -32,8 +34,10 @@ async fn get_posts() {
             }
         };
 
-        if posts.len() == 0 {
-            println!("{}: NO POSTS", profile.display_name);
+        info!(follower, num_posts = posts.len());
+
+        if posts.is_empty() {
+            warn!(follower, "NO POSTS");
             continue;
         }
 
@@ -48,7 +52,7 @@ async fn get_posts() {
         }
     }
 
-    println!("DONE")
+    info!("DONE")
 }
 
 async fn related_subreddits() {
@@ -82,7 +86,10 @@ async fn user_profile() {
     let mut reddit = Reddit::new();
     reddit.authorize().await.unwrap();
 
-    let posts = match reddit.user_profile_latest("Individual_Air_5532".to_owned()).await {
+    let posts = match reddit
+        .user_profile_latest("Individual_Air_5532".to_owned())
+        .await
+    {
         Ok(posts) => posts,
         Err(err) => {
             dbg!(err);
@@ -103,7 +110,20 @@ async fn user_profile() {
     }
 }
 
+fn init_tracing() {
+    let target = Targets::new().with_target(env!("CARGO_PKG_NAME"), Level::DEBUG);
+
+    let timer = tracing_subscriber::fmt::time::ChronoLocal::new("%H:%M:%S%.3f".to_owned());
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().compact().with_timer(timer))
+        .with(target)
+        .init();
+}
+
 fn main() {
+    init_tracing();
+
     dotenv::from_filename("ghost.env").unwrap();
 
     tokio::runtime::Builder::new_multi_thread()
@@ -111,7 +131,6 @@ fn main() {
         .build()
         .unwrap()
         .block_on(
-            get_posts()
-            // user_profile(),
+            get_posts(), // user_profile(),
         );
 }

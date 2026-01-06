@@ -8,11 +8,10 @@ struct Media {
 }
 
 async fn download(url: String, path: PathBuf) {
-
     if path.exists() {
-        return
+        return;
     }
-    
+
     println!("{}->{:?}", url, path);
 
     let res = reqwest::get(url).await.unwrap();
@@ -27,12 +26,17 @@ fn prepare_output_path(post: &Post) -> (PathBuf, bool) {
     let mut output_path = std::path::absolute(output_dir).unwrap();
 
     output_path.push(&post.author);
-    if post.title.len() > 255 {
-        let name: String = post.title.chars().take(200).collect();
-        output_path.push(name);
-    } else {
-        output_path.push(&post.title);
-    }
+
+    let title: String = post
+        .title
+        .chars()
+        .filter(|c| !c.is_ascii_punctuation())
+        .take(200)
+        .collect();
+
+    let title = title.replace(" ", "_");
+
+    output_path.push(title.trim());
 
     let mut exists = false;
 
@@ -64,9 +68,7 @@ pub async fn get_post_images(post: Post) {
                 continue;
             };
 
-            let extension: &str;
-
-            match media_type {
+            let extension = match media_type {
                 x if x.contains("gif") => {
                     media.push(Media {
                         id,
@@ -75,18 +77,14 @@ pub async fn get_post_images(post: Post) {
 
                     continue;
                 }
-                x if x.contains("jpg") => {
-                    extension = "jpg";
-                }
-                x if x.contains("png") => {
-                    extension = "png";
-                }
+                x if x.contains("jpg") => "jpg",
+                x if x.contains("png") => "png",
                 _ => {
                     let message = format!("unhandled media type: {}", media_type);
                     dbg!(message);
                     panic!("unhandled media type");
                 }
-            }
+            };
 
             let Some(source) = media_meta.s.and_then(|item| item.u) else {
                 continue;

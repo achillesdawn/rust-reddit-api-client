@@ -1,6 +1,6 @@
 use base64::prelude::*;
 use reddit::RedditError;
-use reqwest::{header, Client, StatusCode};
+use reqwest::{Client, StatusCode, header};
 use std::{collections::HashMap, env};
 
 use crate::{
@@ -265,7 +265,7 @@ impl Reddit {
     }
 
     pub async fn following(&self) -> Result<Vec<Profile>, RedditError> {
-        let url = format!("/subreddits/mine/subscriber");
+        let url = "/subreddits/mine/subscriber".to_string();
         let full_url = self.base_url.clone() + &url;
 
         let mut results = Vec::new();

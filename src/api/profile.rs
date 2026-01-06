@@ -7,7 +7,7 @@ use super::DataType;
 pub struct Profile {
     pub accept_followers: bool,
     // pub accounts_active: Value,
-    pub accounts_active_is_fuzzed: bool,
+    pub accounts_active_is_fuzzed: Option<bool>,
     // pub active_user_count: Value,
     pub advertiser_category: String,
     pub all_original_content: bool,
