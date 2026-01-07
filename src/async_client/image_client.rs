@@ -24,7 +24,8 @@ impl ImageClient {
           "sec-fetch-mode": "no-cors",
           "sec-fetch-site": "cross-site",
           "sec-fetch-storage-access": "none",
-          "Referer": "https://www.reddit.com/"
+          "Referer": "https://www.reddit.com/",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
         });
 
         let headers: HashMap<String, String> = serde_json::from_value(headers).unwrap();
