@@ -2,8 +2,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Post {
     pub all_awardings: Vec<Value>,
     pub allow_live_comments: bool,
@@ -120,16 +119,16 @@ pub struct Post {
     pub is_gallery: Option<bool>,
 }
 
-// #[derive(Debug, Deserialize)]
+// #[derive(Debug, Clone, Deserialize)]
 // pub struct MediaEmbed {
 // }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Media {
     pub reddit_video: Option<RedditVideo>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct RedditVideo {
     pub bitrate_kbps: Option<u32>,
     pub dash_url: String,
@@ -138,7 +137,7 @@ pub struct RedditVideo {
 
     #[serde(default)]
     pub has_audio: bool,
-    
+
     pub height: u16,
     pub width: u16,
     pub hls_url: String,
@@ -147,13 +146,13 @@ pub struct RedditVideo {
     pub transcoding_status: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Preview {
     pub enabled: bool,
     pub images: Vec<Image>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Image {
     pub id: String,
     pub resolutions: Vec<Resolution>,
@@ -161,40 +160,40 @@ pub struct Image {
     pub variants: Option<Variants>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Resolution {
     pub height: u32,
     pub url: String,
     pub width: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Variants {
     pub nsfw: Option<Nsfw>,
     pub obfuscated: Option<Obfuscated>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Nsfw {
     pub resolutions: Vec<Resolution>,
     pub source: Resolution,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Obfuscated {
     pub resolutions: Vec<Resolution>,
     pub source: Resolution,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SecureMediaEmbed {}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct GalleryData {
     pub items: Vec<Item>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Item {
     pub caption: Option<String>,
     pub id: u32,
@@ -202,7 +201,7 @@ pub struct Item {
     pub outbound_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MediaMetaData {
     pub e: Option<String>,
     pub id: Option<String>,
@@ -212,7 +211,7 @@ pub struct MediaMetaData {
     pub s: Option<MediaPreview>,
     pub status: String,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MediaPreview {
     pub u: Option<String>,
     pub x: u32,

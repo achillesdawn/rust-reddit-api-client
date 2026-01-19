@@ -2,6 +2,7 @@ use base64::prelude::*;
 use reddit::RedditError;
 use reqwest::{Client, StatusCode, header};
 use std::{collections::HashMap, env};
+use tracing::debug;
 
 use crate::{
     api::{Post, Profile, RedditApiResonse},
@@ -9,6 +10,7 @@ use crate::{
 };
 
 mod download;
+mod gif_client;
 mod image_client;
 
 pub use download::get_post_images;
@@ -91,7 +93,7 @@ impl Reddit {
             Err(err) => return Err(RedditError::DeserializeError(err)),
         };
 
-        dbg!(&token);
+        debug!(?token);
 
         let mut default_headers = header::HeaderMap::new();
         default_headers.insert(

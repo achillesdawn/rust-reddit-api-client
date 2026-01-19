@@ -12,7 +12,7 @@ pub struct ImageClient {
 impl ImageClient {
     pub fn new() -> Self {
         let headers = json!({
-          "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "accept": "image/*,*/*;q=0.8",
           "accept-language": "en-US,en;q=0.9",
           "cache-control": "no-cache",
           "pragma": "no-cache",
@@ -52,11 +52,10 @@ impl ImageClient {
         if path.exists() {
             return Ok(false);
         }
-        debug!(?url, ?path);
 
         let res = self
             .client
-            .get(url)
+            .get(&url)
             .send()
             .await
             .wrap_err("could not get url")?;
@@ -66,7 +65,7 @@ impl ImageClient {
             .await
             .wrap_err("could not read response bytes")?;
 
-        let mut file = std::fs::File::create(path).wrap_err("could not create file")?;
+        let mut file = std::fs::File::create(&path).wrap_err("could not create file")?;
 
         file.write_all(&bytes).wrap_err("could not write to file")?;
 

@@ -20,6 +20,8 @@ async fn get_posts() {
 
     profiles.sort_by(|a, b| b.created.total_cmp(&a.created));
 
+    let mut join_set = tokio::task::JoinSet::new();
+
     for profile in profiles {
         if !profile.display_name.starts_with("u_") {
             warn!(profile = profile.display_name, "skipping");
@@ -45,21 +47,21 @@ async fn get_posts() {
             continue;
         }
 
-        let mut join_set = tokio::task::JoinSet::new();
-
         for post in posts {
             join_set.spawn(async_client::get_post_images(post));
         }
 
-        while let Some(res) = join_set.join_next().await {
-            if let Ok(downloads) = res {
-                downloaded += downloads;
+        if let Some(join) = join_set.join_next().await {
+            downloaded += match join {
+                Ok(d) => d,
+                Err(err) => {
+                    error!(?err, "join error");
+                    continue;
+                }
             }
         }
 
-        if downloaded > 0 {
-            info!(user, downloaded, "done");
-        }
+        info!(downloaded, user);
     }
 
     info!("DONE")
@@ -121,7 +123,7 @@ async fn user_profile() {
 }
 
 fn init_tracing() {
-    let target = Targets::new().with_target(env!("CARGO_PKG_NAME"), Level::INFO);
+    let target = Targets::new().with_target(env!("CARGO_PKG_NAME"), Level::TRACE);
 
     let timer = tracing_subscriber::fmt::time::ChronoLocal::new("%H:%M:%S%.3f".to_owned());
 

@@ -1,9 +1,9 @@
 use std::{io::Write, path::PathBuf, str::FromStr, sync::Arc};
 
 use eyre::Context;
-use tracing::{debug, error};
+use tracing::{debug, error, info, warn};
 
-use crate::api::Post;
+use crate::{api::Post, async_client::gif_client::RedGifClient};
 
 use super::image_client::ImageClient;
 
@@ -78,9 +78,14 @@ pub async fn get_post_images(post: Post) -> u32 {
 
     let image_client = Arc::new(ImageClient::new());
 
+    let mut gif_client = RedGifClient::new();
+
+    let post_c = post.clone();
+
     if let Some(metadata) = post.media_metadata {
-        for (_, media_meta) in metadata.into_iter() {
+        for (_image_id, media_meta) in metadata.into_iter() {
             let (Some(media_type), Some(id)) = (media_meta.m, media_meta.id) else {
+                warn!("media has not media type metadata");
                 continue;
             };
 
@@ -103,32 +108,52 @@ pub async fn get_post_images(post: Post) -> u32 {
             };
 
             let Some(source) = media_meta.s.and_then(|item| item.u) else {
+                warn!("could not get image source");
                 continue;
             };
 
             let image_path = output_path.join(&id);
             let image_path = image_path.with_extension(extension);
+            let image_client_clone = image_client.clone();
 
-            let client_clone = image_client.clone();
-
-            join_set.spawn(async move { client_clone.download(source, image_path).await });
+            join_set.spawn(async move { image_client_clone.download(source, image_path).await });
         }
     } else if let Some(preview) = post.preview {
-        dbg!(&preview);
+        if post.domain == "i.redd.it" {
+            for image in preview.images {
+                let image_path = output_path.join(&image.id);
 
-        for image in preview.images {
-            let image_path = output_path.join(&image.id);
+                let client_clone = image_client.clone();
+
+                join_set.spawn(
+                    async move { client_clone.download(image.source.url, image_path).await },
+                );
+            }
+        } else if post.domain.contains("redgif")
+            && let Some((_, video_id)) = post.url.split_once("/watch/")
+        {
+            let video_path = output_path.join(video_id).with_extension("mp4");
+
+            if !video_path.exists() {
+                info!(post.url, video_id, ?video_path, "downloading gif");
+
+                if let Err(err) = gif_client.download(video_id, video_path).await {
+                    error!(?err);
+                }
+            }
+        } else if post.domain.contains("i.redd.it") {
+            let image_path = output_path.join(&post.name);
 
             let client_clone = image_client.clone();
 
-            join_set
-                .spawn(async move { client_clone.download(image.source.url, image_path).await });
+            join_set.spawn(async move { client_clone.download(post.url, image_path).await });
+        } else if post.domain.contains("v.redd.it") {
+        } else {
+            dbg!(&preview, &post_c);
         }
     }
 
     for media in media.into_iter() {
-        dbg!(&media);
-
         let image_path = output_path.join(&media.id);
 
         let url = format!("https://i.redd.it/{}.{}", media.id, media.extension);
