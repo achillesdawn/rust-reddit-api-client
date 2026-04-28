@@ -1,15 +1,15 @@
-#![allow(unused)]
-use enums::DataType;
 use serde::Deserialize;
 use serde_json::Value;
-use std::collections::HashMap;
 
 mod enums;
 mod post;
 mod profile;
+mod subreddit;
 
-pub use profile::Profile;
+pub use enums::DataType;
 pub use post::Post;
+pub use profile::Profile;
+pub use subreddit::Subreddit;
 
 #[derive(Debug, Deserialize)]
 pub enum EndpointType {
@@ -31,8 +31,6 @@ pub struct PagingData<T> {
     pub geo_filter: String,
     pub modhash: Value,
 }
-
-
 
 #[derive(Debug, Deserialize)]
 pub struct Child<T> {

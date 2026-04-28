@@ -5,16 +5,18 @@ edition = "2024"
 
 [dependencies]
 base64 = "0.22.1"
-chrono = "0.4.42"
+bytes = "1.11.1"
+chrono = "0.4"
 clap = "4.5.23"
 dotenv = "0.15.0"
-eyre = "0.6.12"
-reqwest = { version = "0.13.1", features = ["query", "form"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-serde_path_to_error = "0.1.20"
+eyre = "0.6"
+reqwest = { version = "0.13", features = ["query", "form"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_path_to_error = "0.1"
 thiserror = "1.0.62"
-tokio = { version = "1.49.0", features = ["rt-multi-thread", "time", "macros", "process"] }
-tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["chrono"] }
+tokio = { version = "1.0", features = ["rt-multi-thread", "time", "macros", "process"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["chrono"] }
+url = "2.5.8"
 

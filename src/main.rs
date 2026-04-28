@@ -1,10 +1,6 @@
-mod api;
-mod async_client;
-mod token;
-
 use std::collections::HashMap;
 
-use async_client::Reddit;
+use reddit::async_client::Reddit;
 use tracing::{Level, error, info, warn};
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -32,7 +28,7 @@ async fn get_posts() {
 
         let mut downloaded = 0u32;
 
-        let posts = match reddit.user_profile_latest(user.to_owned()).await {
+        let posts = match reddit.user_posts_latest(user.to_owned()).await {
             Ok(posts) => posts,
             Err(err) => {
                 error!(?err);
@@ -48,7 +44,7 @@ async fn get_posts() {
         }
 
         for post in posts {
-            join_set.spawn(async_client::get_post_images(post));
+            join_set.spawn(reddit::async_client::get_post_images(post));
         }
 
         if let Some(join) = join_set.join_next().await {
@@ -82,7 +78,7 @@ async fn related_subreddits() {
     let mut counts: HashMap<String, u32> = HashMap::new();
 
     for user in users.into_iter() {
-        let user_posts = reddit.user_profile(user).await.unwrap();
+        let user_posts = reddit.user_posts(user).await.unwrap();
         for post in user_posts {
             counts
                 .entry(post.subreddit)
@@ -99,7 +95,7 @@ async fn user_profile() {
     reddit.authorize().await.unwrap();
 
     let posts = match reddit
-        .user_profile_latest("Individual_Air_5532".to_owned())
+        .user_posts_latest("Individual_Air_5532".to_owned())
         .await
     {
         Ok(posts) => posts,
@@ -112,7 +108,7 @@ async fn user_profile() {
     let mut join_set = tokio::task::JoinSet::new();
 
     for post in posts {
-        join_set.spawn(async_client::get_post_images(post));
+        join_set.spawn(reddit::async_client::get_post_images(post));
     }
 
     while let Some(res) = join_set.join_next().await {
