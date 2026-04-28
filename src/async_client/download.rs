@@ -98,7 +98,7 @@ pub async fn get_post_images(post: Post) -> u32 {
 
                     continue;
                 }
-                x if x.contains("jpg") => "jpg",
+                x if x.contains("jpg") || x.contains("jpeg") => "jpg",
                 x if x.contains("png") => "png",
                 _ => {
                     let message = format!("unhandled media type: {}", media_type);

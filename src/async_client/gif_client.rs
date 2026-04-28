@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use eyre::Context;
+use tracing::debug;
 
 pub struct RedGifClient {
     semaphore: tokio::sync::Semaphore,
@@ -24,12 +25,14 @@ impl RedGifClient {
             .await
             .wrap_err("could not acquire semaphore")?;
 
-        let mut child = tokio::process::Command::new("ffmpeg")
-            .args(["-i", &url, "-c", "copy", path.to_str().unwrap()])
-            .spawn()
-            .wrap_err("could not spawn process")?;
+        debug!(?path);
 
-        child.wait().await.wrap_err("child exited with error")?;
+        // let mut child = tokio::process::Command::new("ffmpeg")
+        //     .args(["-i", &url, "-c", "copy", path.to_str().unwrap()])
+        //     .spawn()
+        //     .wrap_err("could not spawn process")?;
+
+        // child.wait().await.wrap_err("child exited with error")?;
 
         drop(permit);
 
