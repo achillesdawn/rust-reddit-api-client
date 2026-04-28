@@ -1,16 +1,12 @@
 use std::collections::HashMap;
 
 use reddit::async_client::Reddit;
-use tracing::{Level, error, info, warn};
-use tracing_subscriber::{filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing::{error, info, warn};
 
 async fn get_posts() {
-    let mut reddit = Reddit::new();
-
-    reddit.authorize().await.unwrap();
+    let mut reddit = Reddit::new().await.unwrap();
 
     info!("authorized");
-    // reddit.subreddit("blender").await.unwrap();
 
     let mut profiles = reddit.following().await.unwrap();
 
@@ -64,8 +60,7 @@ async fn get_posts() {
 }
 
 async fn related_subreddits() {
-    let mut reddit = Reddit::new();
-    reddit.authorize().await.unwrap();
+    let mut reddit = Reddit::new().await.unwrap();
 
     let posts = reddit.subreddit("blender").await.unwrap();
 
@@ -91,8 +86,7 @@ async fn related_subreddits() {
 }
 
 async fn user_profile() {
-    let mut reddit = Reddit::new();
-    reddit.authorize().await.unwrap();
+    let mut reddit = Reddit::new().await.unwrap();
 
     let posts = match reddit.user_posts_latest("Individual_Air_5532").await {
         Ok(posts) => posts,

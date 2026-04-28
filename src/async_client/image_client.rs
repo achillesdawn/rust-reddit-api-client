@@ -3,7 +3,6 @@ use std::{collections::HashMap, io::Write, path::PathBuf, str::FromStr};
 use eyre::Context;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde_json::json;
-use tracing::debug;
 
 pub struct ImageClient {
     client: reqwest::Client,

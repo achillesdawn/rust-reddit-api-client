@@ -24,27 +24,38 @@ pub struct Reddit {
 }
 
 impl Reddit {
-    pub fn new() -> Self {
-        let client = reqwest::ClientBuilder::new()
+    fn build_client(token: Token) -> reqwest::Client {
+        reqwest::ClientBuilder::new()
             // .user_agent("Rust: Followers v0.1.0 by u/ghostofmikael")
             .user_agent("Rust: trends v0.1.0 by u/molivo10")
+            .default_headers(token.into())
             .build()
-            .unwrap();
+            .unwrap()
+    }
 
+    pub async fn new() -> eyre::Result<Self> {
         let period = std::time::Duration::from_secs_f32(1. / 100.);
 
         let timer = tokio::time::interval(period);
 
-        Reddit {
-            token: Token::new(),
+        let token = Reddit::authenticate().await?;
+
+        let client = Reddit::build_client(token.clone());
+
+        Ok(Reddit {
+            token,
             client,
             base_url: url::Url::parse("https://oauth.reddit.com").expect("could no parse base url"),
             timer,
-        }
+        })
     }
 
     async fn handle_request(&mut self, req: reqwest::Request) -> eyre::Result<bytes::Bytes> {
         self.timer.tick().await;
+
+        if self.auth_token_expired() {
+            self.re_authenticate().await?;
+        }
 
         let r = self
             .client
@@ -55,6 +66,10 @@ impl Reddit {
             .wrap_err("status error")?;
 
         r.bytes().await.wrap_err("could not read response bytes")
+    }
+
+    fn auth_token_expired(&self) -> bool {
+        self.token.is_expired()
     }
 
     pub async fn following(&mut self) -> eyre::Result<Vec<Profile>> {
@@ -98,11 +113,5 @@ impl Reddit {
         }
 
         Ok(results)
-    }
-}
-
-impl Default for Reddit {
-    fn default() -> Self {
-        Self::new()
     }
 }

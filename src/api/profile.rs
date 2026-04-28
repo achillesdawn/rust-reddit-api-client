@@ -1,7 +1,4 @@
 use serde::Deserialize;
-use serde::Serialize;
-
-use super::DataType;
 
 #[derive(Debug, Deserialize)]
 pub struct Profile {

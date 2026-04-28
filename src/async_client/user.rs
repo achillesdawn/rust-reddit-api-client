@@ -119,9 +119,7 @@ mod tests {
 
         dotenv::from_filename("ghost.env").unwrap();
 
-        let mut client = Reddit::new();
-
-        client.authorize().await?;
+        let mut client = Reddit::new().await?;
 
         let posts = client.user_posts_latest("Marielle333").await?;
 
@@ -138,9 +136,7 @@ mod tests {
 
         dotenv::from_filename("ghost.env").unwrap();
 
-        let mut client = Reddit::new();
-
-        client.authorize().await?;
+        let mut client = Reddit::new().await?;
 
         let posts = client.user_posts("e_o_raul").await?;
 

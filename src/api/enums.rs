@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use serde::Deserialize;
 
+#[allow(dead_code)]
 enum RedditTime {
     Hour,
     Day,

@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
+use reqwest::header::HeaderMap;
 use serde::Deserialize;
 
 #[allow(unused)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Token {
     pub access_token: String,
     pub expires_in: i64,
@@ -40,5 +41,21 @@ impl Token {
         }
 
         false
+    }
+}
+
+impl From<Token> for HeaderMap {
+    fn from(val: Token) -> Self {
+        HeaderMap::from_iter([(
+            reqwest::header::AUTHORIZATION,
+            reqwest::header::HeaderValue::from_str(&format!("Bearer {}", val.access_token))
+                .unwrap(),
+        )])
+    }
+}
+
+impl Default for Token {
+    fn default() -> Self {
+        Self::new()
     }
 }

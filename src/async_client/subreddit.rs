@@ -135,7 +135,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_subreddit_names() -> Result<()> {
-        let client = Reddit::new();
+        let client = Reddit::new().await?;
 
         let result = client.search_subreddits("human", Some(100)).await?;
 
