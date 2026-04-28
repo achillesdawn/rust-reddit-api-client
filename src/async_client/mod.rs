@@ -38,9 +38,7 @@ impl Reddit {
         Reddit {
             token: Token::new(),
             client,
-            base_url: "https://oauth.reddit.com"
-                .parse()
-                .expect("could no parse base url"),
+            base_url: url::Url::parse("https://oauth.reddit.com").expect("could no parse base url"),
             timer,
         }
     }

@@ -4,7 +4,7 @@ use reqwest::Method;
 use crate::api::{Post, RedditApiResonse};
 
 impl super::Reddit {
-    pub async fn user_posts_latest(&mut self, username: String) -> eyre::Result<Vec<Post>> {
+    pub async fn user_posts_latest(&mut self, username: &str) -> eyre::Result<Vec<Post>> {
         let mut url = self
             .base_url
             .join(&format!("/user/{username}/submitted"))
@@ -47,7 +47,7 @@ impl super::Reddit {
         Ok(posts)
     }
 
-    pub async fn user_posts(&mut self, username: String) -> eyre::Result<Vec<Post>> {
+    pub async fn user_posts(&mut self, username: &str) -> eyre::Result<Vec<Post>> {
         let mut url = self
             .base_url
             .join(&format!("/user/{username}/submitted"))
@@ -102,5 +102,52 @@ impl super::Reddit {
         }
 
         Ok(posts)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use eyre::Result;
+    use tracing::info;
+
+    use crate::async_client::Reddit;
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_user_posts_latest() -> Result<()> {
+        tracing_subscriber::fmt::init();
+
+        dotenv::from_filename("ghost.env").unwrap();
+
+        let mut client = Reddit::new();
+
+        client.authorize().await?;
+
+        let posts = client.user_posts_latest("Marielle333").await?;
+
+        dbg!(posts.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_user_posts() -> eyre::Result<()> {
+        tracing_subscriber::fmt::init();
+
+        info!("loading env");
+
+        dotenv::from_filename("ghost.env").unwrap();
+
+        let mut client = Reddit::new();
+
+        client.authorize().await?;
+
+        let posts = client.user_posts("e_o_raul").await?;
+
+        let file = std::fs::File::create("example.json")?;
+
+        serde_json::to_writer(file, &posts)?;
+
+        Ok(())
     }
 }

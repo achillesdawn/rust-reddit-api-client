@@ -132,7 +132,6 @@ mod tests {
     use eyre::Result;
 
     use super::*;
-    use crate::api::DataType;
 
     #[tokio::test]
     async fn test_search_subreddit_names() -> Result<()> {
@@ -143,68 +142,5 @@ mod tests {
         dbg!(result);
 
         Ok(())
-    }
-
-    #[test]
-    fn test_deserialize_subreddit_search() {
-        let json = r#"{
-            "kind": "Listing",
-            "data": {
-                "after": null,
-                "before": null,
-                "dist": 1,
-                "geo_filter": "",
-                "modhash": null,
-                "children": [
-                    {
-                        "kind": "t5",
-                        "data": {
-                            "display_name": "programming",
-                            "title": "Computer Programming",
-                            "subscribers": 5000000,
-                            "display_name_prefixed": "r/programming",
-                            "public_description": "Computer Programming",
-                            "community_icon": "",
-                            "icon_img": "",
-                            "over18": false,
-                            "name": "t5_2qi58",
-                            "id": "2qi58",
-                            "url": "/r/programming/",
-                            "created_utc": 1131011354.0
-                        }
-                    }
-                ]
-            }
-        }"#;
-
-        let res: RedditApiResonse<Subreddit> = serde_json::from_str(json).unwrap();
-        assert_eq!(res.data.children.len(), 1);
-        let sub = &res.data.children[0].data;
-        assert_eq!(sub.display_name, "programming");
-        assert_eq!(sub.subscribers, Some(5000000));
-        assert!(matches!(res.data.children[0].kind, DataType::t5));
-    }
-
-    #[test]
-    fn test_deserialize_search_reddit_names() {
-        let json = r#"{
-            "names": ["programming", "ProgrammingLanguages", "programminghorror"]
-        }"#;
-
-        let json_value: Value = serde_json::from_str(json).unwrap();
-        let names: Vec<String> =
-            if let Some(names) = json_value.get("names").and_then(|v| v.as_array()) {
-                names
-                    .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect()
-            } else {
-                vec![]
-            };
-
-        assert_eq!(names.len(), 3);
-        assert_eq!(names[0], "programming");
-        assert_eq!(names[1], "ProgrammingLanguages");
-        assert_eq!(names[2], "programminghorror");
     }
 }

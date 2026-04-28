@@ -28,7 +28,7 @@ async fn get_posts() {
 
         let mut downloaded = 0u32;
 
-        let posts = match reddit.user_posts_latest(user.to_owned()).await {
+        let posts = match reddit.user_posts_latest(user).await {
             Ok(posts) => posts,
             Err(err) => {
                 error!(?err);
@@ -78,7 +78,7 @@ async fn related_subreddits() {
     let mut counts: HashMap<String, u32> = HashMap::new();
 
     for user in users.into_iter() {
-        let user_posts = reddit.user_posts(user).await.unwrap();
+        let user_posts = reddit.user_posts(&user).await.unwrap();
         for post in user_posts {
             counts
                 .entry(post.subreddit)
@@ -94,10 +94,7 @@ async fn user_profile() {
     let mut reddit = Reddit::new();
     reddit.authorize().await.unwrap();
 
-    let posts = match reddit
-        .user_posts_latest("Individual_Air_5532".to_owned())
-        .await
-    {
+    let posts = match reddit.user_posts_latest("Individual_Air_5532").await {
         Ok(posts) => posts,
         Err(err) => {
             dbg!(err);
@@ -118,19 +115,8 @@ async fn user_profile() {
     }
 }
 
-fn init_tracing() {
-    let target = Targets::new().with_target(env!("CARGO_PKG_NAME"), Level::TRACE);
-
-    let timer = tracing_subscriber::fmt::time::ChronoLocal::new("%H:%M:%S%.3f".to_owned());
-
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().compact().with_timer(timer))
-        .with(target)
-        .init();
-}
-
 fn main() {
-    init_tracing();
+    tracing_subscriber::fmt::init();
 
     dotenv::from_filename("ghost.env").unwrap();
 
