@@ -16,7 +16,11 @@ impl super::Reddit {
         encoded_auth
     }
 
+    /// reads .env file and authenticates
     pub async fn authenticate() -> eyre::Result<Token> {
+        // optional
+        dotenv::from_filename("ghost.env").unwrap();
+
         let (Ok(client_id), Ok(client_secret), Ok(username), Ok(password)) = (
             std::env::var("REDDIT_CLIENT_ID"),
             std::env::var("REDDIT_CLIENT_SECRET"),

@@ -108,7 +108,6 @@ impl super::Reddit {
 #[cfg(test)]
 mod tests {
     use eyre::Result;
-    use tracing::info;
 
     use crate::async_client::Reddit;
 
@@ -117,11 +116,9 @@ mod tests {
     async fn test_user_posts_latest() -> Result<()> {
         tracing_subscriber::fmt::init();
 
-        dotenv::from_filename("ghost.env").unwrap();
-
         let mut client = Reddit::new().await?;
 
-        let posts = client.user_posts_latest("Marielle333").await?;
+        let posts = client.user_posts_latest("e_o_raul").await?;
 
         dbg!(posts.len());
 
@@ -131,10 +128,6 @@ mod tests {
     #[tokio::test]
     async fn test_user_posts() -> eyre::Result<()> {
         tracing_subscriber::fmt::init();
-
-        info!("loading env");
-
-        dotenv::from_filename("ghost.env").unwrap();
 
         let mut client = Reddit::new().await?;
 
