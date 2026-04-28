@@ -68,10 +68,6 @@ impl Reddit {
         r.bytes().await.wrap_err("could not read response bytes")
     }
 
-    fn auth_token_expired(&self) -> bool {
-        self.token.is_expired()
-    }
-
     pub async fn following(&mut self) -> eyre::Result<Vec<Profile>> {
         let mut url = self
             .base_url

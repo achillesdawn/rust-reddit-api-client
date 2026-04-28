@@ -4,6 +4,10 @@ use eyre::Context;
 use crate::token::Token;
 
 impl super::Reddit {
+    pub fn auth_token_expired(&self) -> bool {
+        self.token.is_expired()
+    }
+
     fn encode_authorization(client_id: String, client_secret: String) -> String {
         let encoded = BASE64_STANDARD_NO_PAD.encode(format!("{}:{}", client_id, client_secret));
 
