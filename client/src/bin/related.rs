@@ -14,7 +14,7 @@ async fn main_async() -> eyre::Result<()> {
 
     for user in users.into_iter() {
         if let Ok(posts) = client
-            .user_latest(reddit::api::Endpoint::Submitted, user, None)
+            .user_latest(user, reddit::api::enums::Endpoint::Submitted, None)
             .await
         {
             for post in posts {

@@ -1,13 +1,13 @@
 use eyre::Context;
 use reqwest::Method;
 
-use crate::api::{Endpoint, Post, RedditApiResponse};
+use crate::api::{Post, RedditApiResponse, enums::Endpoint};
 
 impl super::Reddit {
     pub async fn user_latest(
         &mut self,
-        endpoint: Endpoint,
         username: &str,
+        endpoint: Endpoint,
         limit: Option<u8>,
     ) -> eyre::Result<Vec<Post>> {
         let mut url = self
@@ -97,8 +97,8 @@ mod tests {
 
         let posts = client
             .user_latest(
-                crate::async_client::user::Endpoint::Upvoted,
                 "e_o_raul",
+                crate::async_client::user::Endpoint::Upvoted,
                 None,
             )
             .await?;

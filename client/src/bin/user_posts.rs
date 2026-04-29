@@ -25,7 +25,7 @@ async fn get_posts() {
         let mut downloaded = 0u32;
 
         let posts = match reddit
-            .user_latest(reddit::api::Endpoint::Submitted, user, None)
+            .user_latest(user, reddit::api::enums::Endpoint::Submitted, None)
             .await
         {
             Ok(posts) => posts,
@@ -93,8 +93,8 @@ async fn user_profile() {
 
     let posts = match reddit
         .user_latest(
-            reddit::api::Endpoint::Submitted,
             "Individual_Air_5532",
+            reddit::api::enums::Endpoint::Submitted,
             None,
         )
         .await
