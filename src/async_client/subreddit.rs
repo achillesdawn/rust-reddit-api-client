@@ -142,14 +142,19 @@ impl Reddit {
     }
 
     /// Autocomplete style search for subreddits.
-    /// Uses GET /api/search_subreddits
+    /// Uses GET /api/subreddit_autocomplete_v2
     pub async fn autocomplete_subreddits(&mut self, query: &str) -> eyre::Result<Vec<Subreddit>> {
         let mut url = self
             .base_url
-            .join("/api/search_subreddits")
+            .join("/api/subreddit_autocomplete_v2")
             .wrap_err("could not create url")?;
 
-        url.query_pairs_mut().append_pair("query", query);
+        url.query_pairs_mut().extend_pairs([
+            ("query", query),
+            ("limit", "10"),
+            ("include_profiles", "false"),
+            ("include_over_18", "false"),
+        ]);
 
         let req = reqwest::Request::new(Method::GET, url);
 
@@ -218,6 +223,21 @@ mod tests {
         let mut client = Reddit::new().await?;
 
         let result = client.search_subreddits("human", Some(100)).await?;
+
+        result.iter().for_each(|i| {
+            println!("{}", i.title);
+        });
+
+        dbg!(result.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_autocomplete_subreddits() -> Result<()> {
+        let mut client = Reddit::new().await?;
+
+        let result = client.autocomplete_subreddits("deep").await?;
 
         result.iter().for_each(|i| {
             println!("{}", i.title);
