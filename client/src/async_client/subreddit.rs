@@ -257,10 +257,10 @@ mod tests {
     async fn test_subreddit_posts_latest() -> Result<()> {
         let mut client = Reddit::new().await?;
 
-        let result = client.subreddit_posts_latest("rust").await?;
+        let result = client.subreddit_posts_latest("selfhosted").await?;
 
         result.iter().for_each(|i| {
-            println!("{}", i.title);
+            println!("{} - {}", i.title, i.author);
         });
 
         Ok(())

@@ -1,5 +1,6 @@
 use base64::prelude::*;
 use eyre::Context;
+use tracing::{info, warn};
 
 use super::token::Token;
 
@@ -18,6 +19,13 @@ impl super::Reddit {
 
     /// reads .env file and authenticates
     pub async fn authenticate() -> eyre::Result<Token> {
+        if let Ok(token) = Token::read_cache()
+            && !token.is_expired()
+        {
+            info!("using cached token");
+            return Ok(token);
+        }
+
         // optional
         dotenv::from_filename("ghost.env").unwrap();
 
@@ -57,6 +65,10 @@ impl super::Reddit {
         let token: Token =
             serde_json::from_slice(&bytes).wrap_err("could not deserialize byte response")?;
 
+        if let Err(err) = token.cache() {
+            warn!("could not cache token: {:?}", err);
+        }
+
         Ok(token)
     }
 
@@ -65,8 +77,10 @@ impl super::Reddit {
 
         let client = super::Reddit::build_client(new_token.clone());
 
-        self.client = client;
-        self.token = new_token;
+        {
+            self.client = client;
+            self.token = new_token;
+        }
 
         Ok(())
     }

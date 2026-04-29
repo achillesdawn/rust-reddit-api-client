@@ -1,16 +1,16 @@
 use chrono::{DateTime, Utc};
 use reqwest::header::HeaderMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[allow(unused)]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Token {
     pub access_token: String,
     pub expires_in: i64,
     pub scope: String,
     pub token_type: String,
 
-    #[serde(default = "timestamp_now", skip_deserializing)]
+    #[serde(default = "timestamp_now", skip_deserializing, skip_serializing)]
     token_valid_since: DateTime<Utc>,
 }
 
@@ -41,6 +41,26 @@ impl Token {
         }
 
         false
+    }
+
+    pub fn cache(&self) -> eyre::Result<()> {
+        tracing::debug!("writing token to cache");
+
+        let file = std::fs::File::open("cached.token")?;
+
+        serde_json::to_writer(file, &self)?;
+
+        Ok(())
+    }
+
+    pub fn read_cache() -> eyre::Result<Self> {
+        let file = std::fs::File::open("cached.token")?;
+
+        let token: Token = serde_json::from_reader(file)?;
+
+        tracing::debug!("read token from cache");
+
+        Ok(token)
     }
 }
 
