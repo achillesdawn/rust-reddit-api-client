@@ -1,6 +1,6 @@
 use crate::api::Post;
 use crate::{
-    api::{RedditApiResonse, Subreddit},
+    api::{RedditApiResonse, RedditSingleResponse, Subreddit},
     async_client::Reddit,
 };
 use eyre::Context;
@@ -8,6 +8,21 @@ use reqwest::Method;
 use serde_json::Value;
 
 impl Reddit {
+    pub async fn subreddit_about(&mut self, subreddit: &str) -> eyre::Result<Subreddit> {
+        let url = self
+            .base_url
+            .join(&format!("/r/{}/about", subreddit))
+            .wrap_err("could not create url")?;
+
+        let req = reqwest::Request::new(Method::GET, url);
+
+        let b = self.handle_request(req).await?;
+
+        let data: RedditSingleResponse<Subreddit> =
+            serde_json::from_slice(&b).wrap_err("could not deserialize bytes response")?;
+
+        Ok(data.data)
+    }
     pub async fn subreddit_posts_latest(
         &mut self,
         subreddit_name: &str,
@@ -276,6 +291,17 @@ mod tests {
         result.iter().for_each(|i| {
             println!("{}", i.title);
         });
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_subreddit_about() -> Result<()> {
+        let mut client = Reddit::new().await?;
+
+        let sub = client.subreddit_about("rust").await?;
+
+        dbg!(sub);
 
         Ok(())
     }

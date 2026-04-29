@@ -23,6 +23,12 @@ pub struct RedditApiResonse<T> {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct RedditSingleResponse<T> {
+    pub data: T,
+    pub kind: DataType,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PagingData<T> {
     pub after: Value,
     pub before: Value,
