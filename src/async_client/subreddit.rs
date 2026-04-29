@@ -149,12 +149,14 @@ impl Reddit {
             .join("/api/subreddit_autocomplete_v2")
             .wrap_err("could not create url")?;
 
-        url.query_pairs_mut().extend_pairs([
-            ("query", query),
-            ("limit", "10"),
-            ("include_profiles", "false"),
-            ("include_over_18", "false"),
-        ]);
+        url.query_pairs_mut()
+            .extend_pairs([
+                ("query", query),
+                ("limit", "10"),
+                ("include_profiles", "false"),
+                ("include_over_18", "false"),
+            ])
+            .finish();
 
         let req = reqwest::Request::new(Method::GET, url);
 
@@ -183,15 +185,19 @@ impl Reddit {
             .collect())
     }
 
-    /// Lightweight search for subreddit names.
-    /// Uses GET /api/search_reddit_names
     pub async fn search_reddit_names(&mut self, query: &str) -> eyre::Result<Vec<String>> {
         let mut url = self
             .base_url
             .join("/api/search_reddit_names")
             .wrap_err("could not create url")?;
 
-        url.query_pairs_mut().append_pair("query", query);
+        url.query_pairs_mut()
+            .extend_pairs([
+                ("query", query),
+                ("include_over_18", "false"),
+                ("exact", "false"),
+            ])
+            .finish();
 
         let req = reqwest::Request::new(Method::GET, url);
 
@@ -242,6 +248,19 @@ mod tests {
         result.iter().for_each(|i| {
             println!("{}", i.title);
         });
+
+        dbg!(result.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_search_reddit_names_subreddits() -> Result<()> {
+        let mut client = Reddit::new().await?;
+
+        let result = client.search_reddit_names("art").await?;
+
+        dbg!(&result);
 
         dbg!(result.len());
 
