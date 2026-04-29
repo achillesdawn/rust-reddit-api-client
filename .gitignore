@@ -3,3 +3,4 @@
 result.json
 assets/
 .vscode
+/client/cached.token
