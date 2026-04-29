@@ -82,7 +82,16 @@ async fn related_subreddits() {
     let mut counts: HashMap<String, u32> = HashMap::new();
 
     for user in users.into_iter() {
-        let user_posts = reddit.user(&user, None).await.unwrap();
+        let user_posts = reddit
+            .user(
+                &user,
+                reddit::api::enums::Endpoint::Submitted,
+                reddit::api::enums::SortType::New,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
         for post in user_posts {
             counts
                 .entry(post.subreddit)
