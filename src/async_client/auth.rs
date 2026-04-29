@@ -37,6 +37,7 @@ impl super::Reddit {
         let res = reqwest::Client::new()
             .post("https://www.reddit.com/api/v1/access_token")
             .header("Authorization", encoded_auth)
+            .header("user-agent", "Rust: trends v0.1.0 by u/molivo10")
             .form(&[
                 ("grant_type", "password"),
                 ("username", &username),

@@ -62,12 +62,12 @@ async fn get_posts() {
 async fn related_subreddits() {
     let mut reddit = Reddit::new().await.unwrap();
 
-    let posts = reddit.subreddit("blender").await.unwrap();
+    let posts = reddit.subreddit_posts_latest("blender").await.unwrap();
 
     let mut users = Vec::new();
 
-    for post in posts.data.children {
-        users.push(post.data.author);
+    for post in posts {
+        users.push(post.author);
     }
 
     let mut counts: HashMap<String, u32> = HashMap::new();
