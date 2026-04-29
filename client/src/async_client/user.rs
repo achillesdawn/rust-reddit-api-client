@@ -1,18 +1,25 @@
 use eyre::Context;
 use reqwest::Method;
 
-use crate::api::{Post, RedditApiResponse};
+use crate::api::{Endpoint, Post, RedditApiResponse};
 
 impl super::Reddit {
-    pub async fn user_posts_latest(&mut self, username: &str) -> eyre::Result<Vec<Post>> {
+    pub async fn user_latest(
+        &mut self,
+        endpoint: Endpoint,
+        username: &str,
+        limit: Option<u8>,
+    ) -> eyre::Result<Vec<Post>> {
         let mut url = self
             .base_url
-            .join(&format!("/user/{username}/submitted"))
+            .join(&format!("/user/{username}/{endpoint}"))
             .wrap_err("could not create url")?;
+
+        let limit = limit.map(|i| i.to_string()).unwrap_or("100".to_owned());
 
         url.query_pairs_mut()
             .extend_pairs([
-                ("limit", "100"),
+                ("limit", limit.as_str()),
                 ("context", "2"),
                 ("show", "given"),
                 ("sort", "new"),
@@ -29,7 +36,7 @@ impl super::Reddit {
         Ok(data.data.children.into_iter().map(|a| a.data).collect())
     }
 
-    pub async fn user_posts(&mut self, username: &str) -> eyre::Result<Vec<Post>> {
+    pub async fn user(&mut self, username: &str, limit: Option<usize>) -> eyre::Result<Vec<Post>> {
         let mut url = self
             .base_url
             .join(&format!("/user/{username}/submitted"))
@@ -58,6 +65,10 @@ impl super::Reddit {
 
             if data.data.after.is_null() {
                 break;
+            } else if let Some(limit) = limit
+                && posts.len() >= limit
+            {
+                break;
             } else {
                 let after = data.data.after.as_str().unwrap().to_owned();
                 url.query_pairs_mut()
@@ -84,7 +95,13 @@ mod tests {
 
         let mut client = Reddit::new().await?;
 
-        let posts = client.user_posts_latest("e_o_raul").await?;
+        let posts = client
+            .user_latest(
+                crate::async_client::user::Endpoint::Upvoted,
+                "e_o_raul",
+                None,
+            )
+            .await?;
 
         dbg!(posts.len());
 
@@ -98,7 +115,7 @@ mod tests {
 
         let mut client = Reddit::new().await?;
 
-        let posts = client.user_posts("e_o_raul").await?;
+        let posts = client.user("e_o_raul", Some(100)).await?;
 
         let file = std::fs::File::create("example.json")?;
 

@@ -20,6 +20,7 @@ impl Reddit {
 
         Ok(data.data)
     }
+
     pub async fn subreddit_posts_latest(
         &mut self,
         subreddit_name: &str,

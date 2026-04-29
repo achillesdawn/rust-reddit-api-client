@@ -5,11 +5,13 @@ mod enums;
 mod post;
 mod profile;
 mod subreddit;
+mod user;
 
 pub use enums::DataType;
 pub use post::Post;
 pub use profile::Profile;
 pub use subreddit::Subreddit;
+pub use user::Endpoint;
 
 #[derive(Debug, Deserialize)]
 pub enum EndpointType {

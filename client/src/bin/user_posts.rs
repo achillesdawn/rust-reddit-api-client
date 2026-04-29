@@ -24,7 +24,10 @@ async fn get_posts() {
 
         let mut downloaded = 0u32;
 
-        let posts = match reddit.user_posts_latest(user).await {
+        let posts = match reddit
+            .user_latest(reddit::api::Endpoint::Submitted, user, None)
+            .await
+        {
             Ok(posts) => posts,
             Err(err) => {
                 error!(?err);
@@ -73,7 +76,7 @@ async fn related_subreddits() {
     let mut counts: HashMap<String, u32> = HashMap::new();
 
     for user in users.into_iter() {
-        let user_posts = reddit.user_posts(&user).await.unwrap();
+        let user_posts = reddit.user(&user, None).await.unwrap();
         for post in user_posts {
             counts
                 .entry(post.subreddit)
@@ -88,10 +91,17 @@ async fn related_subreddits() {
 async fn user_profile() {
     let mut reddit = Reddit::new().await.unwrap();
 
-    let posts = match reddit.user_posts_latest("Individual_Air_5532").await {
+    let posts = match reddit
+        .user_latest(
+            reddit::api::Endpoint::Submitted,
+            "Individual_Air_5532",
+            None,
+        )
+        .await
+    {
         Ok(posts) => posts,
         Err(err) => {
-            dbg!(err);
+            let _ = dbg!(err);
             return;
         }
     };
