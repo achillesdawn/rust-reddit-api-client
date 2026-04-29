@@ -1,7 +1,7 @@
 use base64::prelude::*;
 use eyre::Context;
 
-use crate::token::Token;
+use super::token::Token;
 
 impl super::Reddit {
     pub fn auth_token_expired(&self) -> bool {

@@ -1,19 +1,18 @@
 use eyre::Context;
 use reqwest::{Client, Method};
 
-use crate::{
-    api::{Profile, RedditApiResponse},
-    token::Token,
-};
+use crate::api::{Profile, RedditApiResponse};
 
 mod auth;
 mod download;
 mod gif_client;
 mod image_client;
 mod subreddit;
+mod token;
 mod user;
 
 pub use download::get_post_images;
+use token::Token;
 
 pub struct Reddit {
     token: Token,
