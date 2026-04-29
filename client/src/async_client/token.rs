@@ -10,7 +10,7 @@ pub struct Token {
     pub scope: String,
     pub token_type: String,
 
-    #[serde(default = "timestamp_now", skip_deserializing, skip_serializing)]
+    #[serde(default = "timestamp_now")]
     token_valid_since: DateTime<Utc>,
 }
 
@@ -46,7 +46,7 @@ impl Token {
     pub fn cache(&self) -> eyre::Result<()> {
         tracing::debug!("writing token to cache");
 
-        let file = std::fs::File::open("cached.token")?;
+        let file = std::fs::File::create("cached.token")?;
 
         serde_json::to_writer(file, &self)?;
 
