@@ -2,7 +2,7 @@ use eyre::Context;
 use reqwest::{Client, Method};
 
 use crate::{
-    api::{Profile, RedditApiResonse},
+    api::{Profile, RedditApiResponse},
     token::Token,
 };
 
@@ -68,6 +68,29 @@ impl Reddit {
         r.bytes().await.wrap_err("could not read response bytes")
     }
 
+    pub async fn request_and_deserialize<T>(&mut self, req: reqwest::Request) -> eyre::Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let b = self.handle_request(req).await?;
+
+        let deserializer = &mut serde_json::Deserializer::from_slice(&b);
+
+        let data: T = match serde_path_to_error::deserialize(deserializer) {
+            Ok(data) => data,
+            Err(err) => {
+                dbg!(&err);
+                let raw = std::str::from_utf8(&b).unwrap_or("invalid utf8");
+                dbg!(raw);
+                let path = err.path().to_string();
+                dbg!(path);
+                return Err(eyre::eyre!("could not deserialize bytes response"));
+            }
+        };
+
+        Ok(data)
+    }
+
     pub async fn following(&mut self) -> eyre::Result<Vec<Profile>> {
         let mut url = self
             .base_url
@@ -83,20 +106,7 @@ impl Reddit {
         loop {
             let req = reqwest::Request::new(Method::GET, url.clone());
 
-            let b = self.handle_request(req).await?;
-
-            let deserializer = &mut serde_json::Deserializer::from_slice(&b);
-
-            let data: RedditApiResonse<Profile> =
-                match serde_path_to_error::deserialize(deserializer) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        dbg!(&err);
-                        let path = err.path().to_string();
-                        dbg!(path);
-                        return Err(eyre::eyre!("could not deserialize bytes response"));
-                    }
-                };
+            let data: RedditApiResponse<Profile> = self.request_and_deserialize(req).await?;
 
             results.extend(data.data.children.into_iter().map(|child| child.data));
 

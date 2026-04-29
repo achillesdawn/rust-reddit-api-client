@@ -17,15 +17,9 @@ pub enum EndpointType {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RedditApiResonse<T> {
+pub struct RedditApiResponse<T> {
     pub data: PagingData<T>,
     pub kind: EndpointType,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RedditSingleResponse<T> {
-    pub data: T,
-    pub kind: DataType,
 }
 
 #[derive(Debug, Deserialize)]

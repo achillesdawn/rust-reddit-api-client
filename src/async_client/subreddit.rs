@@ -1,6 +1,6 @@
 use crate::api::Post;
 use crate::{
-    api::{RedditApiResonse, RedditSingleResponse, Subreddit},
+    api::{RedditApiResponse, Subreddit},
     async_client::Reddit,
 };
 use eyre::Context;
@@ -16,10 +16,7 @@ impl Reddit {
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let b = self.handle_request(req).await?;
-
-        let data: RedditSingleResponse<Subreddit> =
-            serde_json::from_slice(&b).wrap_err("could not deserialize bytes response")?;
+        let data: crate::api::Child<Subreddit> = self.request_and_deserialize(req).await?;
 
         Ok(data.data)
     }
@@ -38,21 +35,7 @@ impl Reddit {
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let bytes = self.handle_request(req).await?;
-
-        let deserializer = &mut serde_json::Deserializer::from_slice(&bytes);
-
-        let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer) {
-            Ok(data) => data,
-            Err(err) => {
-                dbg!(&err);
-                let raw = std::str::from_utf8(&bytes).unwrap_or("invalid utf8");
-                dbg!(raw);
-                let path = err.path().to_string();
-                dbg!(path);
-                return Err(eyre::eyre!("could not deserialize bytes response"));
-            }
-        };
+        let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
 
         Ok(data
             .data
@@ -77,22 +60,7 @@ impl Reddit {
         loop {
             let req = reqwest::Request::new(Method::GET, url.clone());
 
-            let b = self.handle_request(req).await?;
-
-            let deserializer = &mut serde_json::Deserializer::from_slice(&b);
-
-            let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer)
-            {
-                Ok(data) => data,
-                Err(err) => {
-                    dbg!(&err);
-                    let raw = std::str::from_utf8(&b).unwrap_or("invalid utf8");
-                    dbg!(raw);
-                    let path = err.path().to_string();
-                    dbg!(path);
-                    return Err(eyre::eyre!("could not deserialize bytes response"));
-                }
-            };
+            let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
 
             posts.extend(data.data.children.into_iter().map(|child| child.data));
 
@@ -111,8 +79,6 @@ impl Reddit {
         Ok(posts)
     }
 
-    /// Searches for subreddits matching the given query.
-    /// Uses GET /subreddits/search
     pub async fn search_subreddits(
         &mut self,
         query: &str,
@@ -131,22 +97,7 @@ impl Reddit {
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let bytes = self.handle_request(req).await?;
-
-        let deserializer = &mut serde_json::Deserializer::from_slice(&bytes);
-
-        let data: RedditApiResonse<Subreddit> = match serde_path_to_error::deserialize(deserializer)
-        {
-            Ok(data) => data,
-            Err(err) => {
-                dbg!(&err);
-                let raw = std::str::from_utf8(&bytes).unwrap_or("invalid utf8");
-                dbg!(raw);
-                let path = err.path().to_string();
-                dbg!(path);
-                return Err(eyre::eyre!("could not deserialize bytes response"));
-            }
-        };
+        let data: RedditApiResponse<Subreddit> = self.request_and_deserialize(req).await?;
 
         Ok(data
             .data
@@ -156,8 +107,7 @@ impl Reddit {
             .collect())
     }
 
-    /// Autocomplete style search for subreddits.
-    /// Uses GET /api/subreddit_autocomplete_v2
+    // return a list of 10 autocomplete subreddit suggestions
     pub async fn autocomplete_subreddits(&mut self, query: &str) -> eyre::Result<Vec<Subreddit>> {
         let mut url = self
             .base_url
@@ -175,22 +125,7 @@ impl Reddit {
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let bytes = self.handle_request(req).await?;
-
-        let deserializer = &mut serde_json::Deserializer::from_slice(&bytes);
-
-        let data: RedditApiResonse<Subreddit> = match serde_path_to_error::deserialize(deserializer)
-        {
-            Ok(data) => data,
-            Err(err) => {
-                dbg!(&err);
-                let raw = std::str::from_utf8(&bytes).unwrap_or("invalid utf8");
-                dbg!(raw);
-                let path = err.path().to_string();
-                dbg!(path);
-                return Err(eyre::eyre!("could not deserialize bytes response"));
-            }
-        };
+        let data: RedditApiResponse<Subreddit> = self.request_and_deserialize(req).await?;
 
         Ok(data
             .data
@@ -216,9 +151,7 @@ impl Reddit {
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let bytes = self.handle_request(req).await?;
-
-        let json: Value = serde_json::from_slice(&bytes).wrap_err("could not deserialize json")?;
+        let json: Value = self.request_and_deserialize(req).await?;
 
         // This endpoint returns {"names": ["name1", "name2", ...]}
         if let Some(names) = json.get("names").and_then(|v| v.as_array()) {
@@ -231,6 +164,28 @@ impl Reddit {
             Ok(vec![])
         }
     }
+
+    pub async fn subreddits_popular(&mut self, limit: Option<u32>) -> eyre::Result<Vec<Subreddit>> {
+        let mut url = self
+            .base_url
+            .join("/subreddits/popular")
+            .wrap_err("could not create url")?;
+
+        if let Some(n) = limit {
+            url.query_pairs_mut().append_pair("limit", &n.to_string());
+        }
+
+        let req = reqwest::Request::new(Method::GET, url);
+
+        let data: RedditApiResponse<Subreddit> = self.request_and_deserialize(req).await?;
+
+        Ok(data
+            .data
+            .children
+            .into_iter()
+            .map(|child| child.data)
+            .collect())
+    }
 }
 
 #[cfg(test)]
@@ -238,6 +193,22 @@ mod tests {
     use eyre::Result;
 
     use super::*;
+
+    #[tokio::test]
+    async fn test_subreddits_popular() -> Result<()> {
+        let mut client = Reddit::new().await?;
+
+        let result = client.subreddits_popular(Some(100)).await?;
+
+        result.iter().for_each(|i| {
+            println!("{}", i.title);
+        });
+
+        assert!(!result.is_empty());
+        dbg!(result.len());
+
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_search_subreddits() -> Result<()> {

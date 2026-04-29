@@ -1,7 +1,7 @@
 use eyre::Context;
 use reqwest::Method;
 
-use crate::api::{Post, RedditApiResonse};
+use crate::api::{Post, RedditApiResponse};
 
 impl super::Reddit {
     pub async fn user_posts_latest(&mut self, username: &str) -> eyre::Result<Vec<Post>> {
@@ -24,27 +24,9 @@ impl super::Reddit {
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let mut posts = Vec::new();
+        let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
 
-        let b = self.handle_request(req).await?;
-
-        let deserializer = &mut serde_json::Deserializer::from_slice(&b);
-
-        let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer) {
-            Ok(data) => data,
-            Err(err) => {
-                dbg!(&err);
-                let raw = std::str::from_utf8(&b).unwrap();
-                dbg!(raw);
-                let path = err.path().to_string();
-                dbg!(path);
-                return Err(eyre::eyre!("could not deserialize bytes response"));
-            }
-        };
-
-        posts.extend(data.data.children.into_iter().map(|child| child.data));
-
-        Ok(posts)
+        Ok(data.data.children.into_iter().map(|a| a.data).collect())
     }
 
     pub async fn user_posts(&mut self, username: &str) -> eyre::Result<Vec<Post>> {
@@ -70,22 +52,7 @@ impl super::Reddit {
         loop {
             let req = reqwest::Request::new(Method::GET, url.clone());
 
-            let b = self.handle_request(req).await?;
-
-            let deserializer = &mut serde_json::Deserializer::from_slice(&b);
-
-            let data: RedditApiResonse<Post> = match serde_path_to_error::deserialize(deserializer)
-            {
-                Ok(data) => data,
-                Err(err) => {
-                    dbg!(&err);
-                    let raw = std::str::from_utf8(&b).unwrap();
-                    dbg!(raw);
-                    let path = err.path().to_string();
-                    dbg!(path);
-                    return Err(eyre::eyre!("could not deserialize bytes response"));
-                }
-            };
+            let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
 
             posts.extend(data.data.children.into_iter().map(|child| child.data));
 
@@ -112,7 +79,6 @@ mod tests {
     use crate::async_client::Reddit;
 
     #[tokio::test]
-    #[ignore]
     async fn test_user_posts_latest() -> Result<()> {
         tracing_subscriber::fmt::init();
 
@@ -126,6 +92,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_user_posts() -> eyre::Result<()> {
         tracing_subscriber::fmt::init();
 
