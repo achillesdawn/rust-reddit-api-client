@@ -1,13 +1,18 @@
 use eyre::Context;
 use reqwest::Method;
 
-use crate::api::{Post, RedditApiResponse, enums::Endpoint};
+use crate::api::{
+    Post, RedditApiResponse,
+    enums::{Endpoint, SortTime, SortType},
+};
 
 impl super::Reddit {
     pub async fn user_latest(
         &mut self,
         username: &str,
         endpoint: Endpoint,
+        sort: SortType,
+        sort_time: Option<SortTime>,
         limit: Option<u8>,
     ) -> eyre::Result<Vec<Post>> {
         let mut url = self
@@ -17,14 +22,17 @@ impl super::Reddit {
 
         let limit = limit.map(|i| i.to_string()).unwrap_or("100".to_owned());
 
+        if let Some(sort) = sort_time {
+            url.query_pairs_mut().append_pair("t", &sort.to_string());
+        }
+
         url.query_pairs_mut()
             .extend_pairs([
-                ("limit", limit.as_str()),
                 ("context", "2"),
                 ("show", "given"),
-                ("sort", "new"),
-                ("t", "links"),
-                ("type", "all"),
+                ("sort", &sort.to_string()),
+                ("type", "links"),
+                ("limit", limit.as_str()),
                 ("raw_json", "1"),
             ])
             .finish();
@@ -99,6 +107,8 @@ mod tests {
             .user_latest(
                 "e_o_raul",
                 crate::async_client::user::Endpoint::Upvoted,
+                crate::api::enums::SortType::Top,
+                Some(crate::api::enums::SortTime::All),
                 None,
             )
             .await?;
