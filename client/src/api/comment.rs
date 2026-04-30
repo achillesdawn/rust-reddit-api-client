@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 /// SubredditCommentsData
 /// Everything is an option to deal with both `latest_comments` and `article_comments`
-#[derive(Serialize, Debug, Deserialize)]
+#[derive(Serialize, Clone, Debug, Deserialize)]
 pub struct CommentData {
     /// Total awards
     pub total_awards_received: Option<i32>,

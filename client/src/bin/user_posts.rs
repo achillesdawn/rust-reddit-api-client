@@ -50,7 +50,7 @@ async fn get_posts() {
 
         for item in items {
             if let reddit::api::UserItem::Post(post) = item {
-                join_set.spawn(reddit::async_client::get_post_images(post));
+                join_set.spawn(reddit::async_client::get_post_images(*post));
             }
         }
 
@@ -81,7 +81,7 @@ async fn related_subreddits() {
         users.push(post.author);
     }
 
-    let mut counts: HashMap<String, u32> = HashMap::new();
+    let mut counts: HashMap<String, i64> = HashMap::new();
 
     for user in users.into_iter() {
         let items = reddit
@@ -131,7 +131,7 @@ async fn user_profile() {
 
     for item in items {
         if let reddit::api::UserItem::Post(post) = item {
-            join_set.spawn(reddit::async_client::get_post_images(post));
+            join_set.spawn(reddit::async_client::get_post_images(*post));
         }
     }
 

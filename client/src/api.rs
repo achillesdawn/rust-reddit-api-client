@@ -7,7 +7,7 @@ mod post;
 mod profile;
 mod subreddit;
 
-pub use comment::Comment;
+pub use comment::CommentData;
 pub use enums::DataType;
 pub use post::Post;
 pub use profile::Profile;
@@ -17,7 +17,7 @@ pub use subreddit::Subreddit;
 #[serde(untagged)]
 pub enum UserItem {
     Post(Box<Post>),
-    Comment(Box<Comment>),
+    Comment(Box<CommentData>),
 }
 
 #[derive(Debug, Deserialize)]

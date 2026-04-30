@@ -103,7 +103,7 @@ mod tests {
     use eyre::Result;
     use tracing::info;
 
-    use crate::{api::enums::SortTime, async_client::Reddit, api::UserItem};
+    use crate::{api::UserItem, api::enums::SortTime, async_client::Reddit};
 
     #[tokio::test]
     async fn test_user_posts_latest() -> Result<()> {
@@ -124,7 +124,7 @@ mod tests {
         for item in items {
             match item {
                 UserItem::Post(post) => info!(post.subreddit, "{}", post.title),
-                UserItem::Comment(comment) => info!(comment.subreddit, "{}", comment.body),
+                UserItem::Comment(comment) => info!(comment.subreddit, "{:?}", comment.body),
             }
         }
 
