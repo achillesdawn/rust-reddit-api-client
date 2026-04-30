@@ -44,12 +44,14 @@ impl super::Reddit {
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> eyre::Result<ApiResponse> {
+    ) -> eyre::Result<Vec<Kind>> {
         let url = create_endpoint_url(username, endpoint, sort, sort_time, limit);
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        self.request_and_deserialize(req).await
+        let latest = self.request_and_deserialize::<ApiResponse>(req).await?;
+
+        Ok(latest.data.children)
     }
 
     pub async fn user(

@@ -1,25 +1,33 @@
-use reddit::async_client::Reddit;
+use reddit::{api::Kind, async_client::Reddit};
 use tracing::error;
 
 async fn main_async() -> eyre::Result<()> {
     let mut client = Reddit::new().await?;
 
-    // let posts = client.subreddit_posts_latest("selfhosted").await?;
+    let posts = client
+        .subreddit_posts_latest(
+            "selfhosted",
+            reddit::api::enums::SubredditSortType::Top,
+            Some(reddit::api::enums::SortTime::Year),
+            None,
+        )
+        .await?;
 
-    // let users = posts.iter().map(|p| p.author.as_str()).collect::<Vec<_>>();
+    let posts = posts.iter().filter_map(Kind::as_post).collect::<Vec<_>>();
+    let users = posts.iter().map(|p| p.author.as_str()).collect::<Vec<_>>();
 
-    // for user in users.into_iter() {
-    //     if let Ok(_items) = client
-    //         .user_latest(
-    //             user,
-    //             reddit::api::enums::Endpoint::Submitted,
-    //             reddit::api::enums::SortType::New,
-    //             None,
-    //             None,
-    //         )
-    //         .await
-    //     {}
-    // }
+    for user in users.into_iter() {
+        if let Ok(items) = client
+            .user_latest(
+                user,
+                reddit::api::enums::Endpoint::Submitted,
+                reddit::api::enums::SortType::New,
+                None,
+                None,
+            )
+            .await
+        {}
+    }
 
     Ok(())
 }
