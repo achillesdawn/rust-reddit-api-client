@@ -1,4 +1,4 @@
-use crate::api::enums::SubredditSortType;
+use crate::api::enums::{SortTime, SubredditSortType};
 use crate::api::{ApiResponse, BASE_URL, Kind};
 use crate::{
     api::{RedditApiResponse, Subreddit},
@@ -8,12 +8,27 @@ use eyre::Context;
 use reqwest::Method;
 use serde_json::Value;
 
-fn create_subreddit_url(subreddit: &str, sort_type: SubredditSortType) -> url::Url {
+fn create_subreddit_url(
+    subreddit: &str,
+    sort_type: SubredditSortType,
+    sort_time: Option<SortTime>,
+    limit: Option<usize>,
+) -> url::Url {
     let mut url = BASE_URL
         .join(&format!("/r/{subreddit}/{sort_type}"))
         .expect("could not create url");
 
-    todo!()
+    let limit = limit.map(|i| format!("{}", i)).unwrap_or("100".to_owned());
+
+    if let Some(sort) = sort_time {
+        url.query_pairs_mut().append_pair("t", &sort.to_string());
+    }
+
+    url.query_pairs_mut()
+        .extend_pairs([("show", "all"), ("limit", &limit), ("raw_json", "1")])
+        .finish();
+
+    url
 }
 
 impl Reddit {
@@ -29,37 +44,30 @@ impl Reddit {
         Ok(data.data)
     }
 
-    // fn create_subreddit_url() -> url::Url {}
+    pub async fn subreddit_posts_latest(
+        &mut self,
+        subreddit_name: &str,
+        sort_type: SubredditSortType,
+        sort_time: Option<SortTime>,
+        limit: Option<usize>,
+    ) -> eyre::Result<Vec<Kind>> {
+        let url = create_subreddit_url(subreddit_name, sort_type, sort_time, limit);
 
-    // pub async fn subreddit_posts_latest(
-    //     &mut self,
-    //     subreddit_name: &str,
-    //     endpoint: Endpoint,
-    //     sort: SortType,
-    //     sort_time: Option<SortTime>,
-    //     limit: Option<usize>,
-    // ) -> eyre::Result<Vec<Kind>> {
-    //     // let url = self.create_endpoint_url("r", su, endpoint, sort, sort_time, limit);
+        let req = reqwest::Request::new(Method::GET, url);
 
-    //     let req = reqwest::Request::new(Method::GET, url);
+        let data: ApiResponse = self.request_and_deserialize(req).await?;
 
-    //     let data: ApiResponse = self.request_and_deserialize(req).await?;
-
-    //     Ok(data.data.children)
-    // }
+        Ok(data.data.children)
+    }
 
     pub async fn subreddit_posts(
         &mut self,
         subreddit_name: &str,
+        sort_type: SubredditSortType,
+        sort_time: Option<SortTime>,
         limit: Option<usize>,
     ) -> eyre::Result<Vec<Kind>> {
-        let mut url = BASE_URL
-            .join(&format!("/r/{subreddit_name}/new"))
-            .wrap_err("could not create url")?;
-
-        let query = [("limit", "100"), ("show", "all"), ("raw_json", "1")];
-
-        url.query_pairs_mut().extend_pairs(query).finish();
+        let url = create_subreddit_url(subreddit_name, sort_type, sort_time, limit);
 
         self.paginated(url, limit).await
     }
@@ -235,16 +243,23 @@ mod tests {
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn test_subreddit_posts_latest() -> Result<()> {
-    //     let mut client = Reddit::new().await?;
+    #[tokio::test]
+    async fn test_subreddit_posts_latest() -> Result<()> {
+        let mut client = Reddit::new().await?;
 
-    //     let result = client.subreddit_posts_latest("selfhosted").await?;
+        let result = client
+            .subreddit_posts_latest(
+                "selfhosted",
+                SubredditSortType::Top,
+                Some(SortTime::Month),
+                None,
+            )
+            .await?;
 
-    //     dbg!(result);
+        dbg!(result);
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_subreddit_about() -> Result<()> {
