@@ -13,11 +13,12 @@ impl RedGifClient {
         Self { semaphore }
     }
 
+    #[allow(dead_code)]
     fn create_url(video_id: &str) -> String {
         format!("https://api.redgifs.com/v2/gifs/{}/hd.m3u8", video_id)
     }
 
-    pub async fn download(&mut self, video_id: &str, path: PathBuf) -> eyre::Result<bool> {
+    pub async fn download(&mut self, _video_id: &str, path: PathBuf) -> eyre::Result<bool> {
         // let url = RedGifClient::create_url(video_id);
 
         let permit = self

@@ -70,6 +70,7 @@ async fn get_posts() {
     info!("DONE")
 }
 
+#[allow(dead_code)]
 async fn related_subreddits() {
     let mut reddit = Reddit::new().await.unwrap();
 
@@ -107,6 +108,7 @@ async fn related_subreddits() {
     }
 }
 
+#[allow(dead_code)]
 async fn user_profile() {
     let mut reddit = Reddit::new().await.unwrap();
 
