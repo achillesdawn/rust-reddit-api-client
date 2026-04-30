@@ -2,7 +2,7 @@ use reqwest::Method;
 use url::Url;
 
 use crate::api::{
-    Kind, RedditApiResponse, RedditApiResponseT,
+    ApiResponse, Kind, RedditApiResponse,
     enums::{Endpoint, SortTime, SortType},
 };
 
@@ -47,7 +47,7 @@ impl super::Reddit {
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> eyre::Result<RedditApiResponseT> {
+    ) -> eyre::Result<ApiResponse> {
         let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
 
         let req = reqwest::Request::new(Method::GET, url);
@@ -81,14 +81,16 @@ impl super::Reddit {
 
             posts.extend(data.data.children.into_iter().map(|child| child.data));
 
-            if data.data.after.is_none() {
-                break;
-            } else if let Some(limit) = limit
-                && posts.len() >= limit
-            {
-                break;
+            if let Some(new_after) = data.data.after {
+                if let Some(limit) = limit
+                    && posts.len() >= limit
+                {
+                    break;
+                }
+
+                after = Some(new_after)
             } else {
-                after = Some(data.data.after.unwrap().as_str().to_owned());
+                break;
             }
         }
 
@@ -100,7 +102,10 @@ impl super::Reddit {
 mod tests {
     use eyre::Result;
 
-    use crate::{api::enums::SortTime, async_client::Reddit};
+    use crate::{
+        api::enums::{Endpoint, SortTime, SortType},
+        async_client::Reddit,
+    };
 
     #[tokio::test]
     async fn test_user_posts_latest() -> Result<()> {
@@ -111,9 +116,9 @@ mod tests {
         let items = client
             .user_latest(
                 "e_o_raul",
-                crate::api::enums::Endpoint::Submitted,
-                crate::api::enums::SortType::Top,
-                Some(crate::api::enums::SortTime::All),
+                Endpoint::Overview,
+                SortType::New,
+                Some(SortTime::All),
                 Some(10),
             )
             .await?;
@@ -132,8 +137,8 @@ mod tests {
         let items = client
             .user(
                 "e_o_raul",
-                crate::api::enums::Endpoint::Upvoted,
-                crate::api::enums::SortType::Top,
+                Endpoint::Comments,
+                SortType::New,
                 Some(SortTime::Month),
                 Some(100),
             )

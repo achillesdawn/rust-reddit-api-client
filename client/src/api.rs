@@ -41,13 +41,13 @@ pub struct Child<T> {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RedditApiResponseT {
-    pub data: PagingDataT,
+pub struct ApiResponse {
+    pub data: PagedResponse,
     pub kind: EndpointType,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PagingDataT {
+pub struct PagedResponse {
     pub after: Option<String>,
     pub before: Option<String>,
     pub children: Vec<Kind>,
