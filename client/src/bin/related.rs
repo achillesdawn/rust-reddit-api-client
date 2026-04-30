@@ -13,7 +13,7 @@ async fn main_async() -> eyre::Result<()> {
     let mut subreddits = HashMap::new();
 
     for user in users.into_iter() {
-        if let Ok(posts) = client
+        if let Ok(items) = client
             .user_latest(
                 user,
                 reddit::api::enums::Endpoint::Submitted,
@@ -23,9 +23,11 @@ async fn main_async() -> eyre::Result<()> {
             )
             .await
         {
-            for post in posts {
-                let entry = subreddits.entry(post.subreddit).or_insert(0);
-                *entry += 1;
+            for item in items {
+                if let reddit::api::UserItem::Post(post) = item {
+                    let entry = subreddits.entry(post.subreddit).or_insert(0);
+                    *entry += 1;
+                }
             }
         }
     }

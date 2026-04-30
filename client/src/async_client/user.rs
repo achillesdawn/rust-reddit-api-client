@@ -1,9 +1,8 @@
-use eyre::Context;
 use reqwest::Method;
 use url::Url;
 
 use crate::api::{
-    Post, RedditApiResponse,
+    RedditApiResponse, UserItem,
     enums::{Endpoint, SortTime, SortType},
 };
 
@@ -48,12 +47,12 @@ impl super::Reddit {
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> eyre::Result<Vec<Post>> {
+    ) -> eyre::Result<Vec<UserItem>> {
         let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
+        let data: RedditApiResponse<UserItem> = self.request_and_deserialize(req).await?;
 
         Ok(data.data.children.into_iter().map(|a| a.data).collect())
     }
@@ -65,7 +64,7 @@ impl super::Reddit {
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> eyre::Result<Vec<Post>> {
+    ) -> eyre::Result<Vec<UserItem>> {
         let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
 
         let mut posts = Vec::new();
@@ -80,7 +79,7 @@ impl super::Reddit {
 
             let req = reqwest::Request::new(Method::GET, url.clone());
 
-            let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
+            let data: RedditApiResponse<UserItem> = self.request_and_deserialize(req).await?;
 
             posts.extend(data.data.children.into_iter().map(|child| child.data));
 
@@ -102,8 +101,9 @@ impl super::Reddit {
 #[cfg(test)]
 mod tests {
     use eyre::Result;
+    use tracing::info;
 
-    use crate::{api::enums::SortTime, async_client::Reddit};
+    use crate::{api::enums::SortTime, async_client::Reddit, api::UserItem};
 
     #[tokio::test]
     async fn test_user_posts_latest() -> Result<()> {
@@ -111,17 +111,22 @@ mod tests {
 
         let mut client = Reddit::new().await?;
 
-        let posts = client
+        let items = client
             .user_latest(
                 "e_o_raul",
-                crate::async_client::user::Endpoint::Upvoted,
+                crate::api::enums::Endpoint::Comments,
                 crate::api::enums::SortType::Top,
                 Some(crate::api::enums::SortTime::All),
                 None,
             )
             .await?;
 
-        dbg!(posts.len());
+        for item in items {
+            match item {
+                UserItem::Post(post) => info!(post.subreddit, "{}", post.title),
+                UserItem::Comment(comment) => info!(comment.subreddit, "{}", comment.body),
+            }
+        }
 
         Ok(())
     }
@@ -133,7 +138,7 @@ mod tests {
 
         let mut client = Reddit::new().await?;
 
-        let posts = client
+        let items = client
             .user(
                 "e_o_raul",
                 crate::api::enums::Endpoint::Upvoted,
@@ -145,7 +150,7 @@ mod tests {
 
         let file = std::fs::File::create("example.json")?;
 
-        serde_json::to_writer(file, &posts)?;
+        serde_json::to_writer(file, &items)?;
 
         Ok(())
     }

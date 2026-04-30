@@ -24,7 +24,7 @@ async fn get_posts() {
 
         let mut downloaded = 0u32;
 
-        let posts = match reddit
+        let items = match reddit
             .user_latest(
                 user,
                 reddit::api::enums::Endpoint::Submitted,
@@ -34,22 +34,24 @@ async fn get_posts() {
             )
             .await
         {
-            Ok(posts) => posts,
+            Ok(items) => items,
             Err(err) => {
                 error!(?err);
                 continue;
             }
         };
 
-        info!(user, num_posts = posts.len());
+        info!(user, num_posts = items.len());
 
-        if posts.is_empty() {
+        if items.is_empty() {
             warn!(user, "NO POSTS");
             continue;
         }
 
-        for post in posts {
-            join_set.spawn(reddit::async_client::get_post_images(post));
+        for item in items {
+            if let reddit::api::UserItem::Post(post) = item {
+                join_set.spawn(reddit::async_client::get_post_images(post));
+            }
         }
 
         if let Some(join) = join_set.join_next().await {
@@ -82,7 +84,7 @@ async fn related_subreddits() {
     let mut counts: HashMap<String, u32> = HashMap::new();
 
     for user in users.into_iter() {
-        let user_posts = reddit
+        let items = reddit
             .user(
                 &user,
                 reddit::api::enums::Endpoint::Submitted,
@@ -92,11 +94,13 @@ async fn related_subreddits() {
             )
             .await
             .unwrap();
-        for post in user_posts {
-            counts
-                .entry(post.subreddit)
-                .and_modify(|e| *e += post.ups)
-                .or_insert(post.ups);
+        for item in items {
+            if let reddit::api::UserItem::Post(post) = item {
+                counts
+                    .entry(post.subreddit)
+                    .and_modify(|e| *e += post.ups)
+                    .or_insert(post.ups);
+            }
         }
 
         dbg!(&counts);
@@ -106,7 +110,7 @@ async fn related_subreddits() {
 async fn user_profile() {
     let mut reddit = Reddit::new().await.unwrap();
 
-    let posts = match reddit
+    let items = match reddit
         .user_latest(
             "Individual_Air_5532",
             reddit::api::enums::Endpoint::Submitted,
@@ -116,7 +120,7 @@ async fn user_profile() {
         )
         .await
     {
-        Ok(posts) => posts,
+        Ok(items) => items,
         Err(err) => {
             let _ = dbg!(err);
             return;
@@ -125,8 +129,10 @@ async fn user_profile() {
 
     let mut join_set = tokio::task::JoinSet::new();
 
-    for post in posts {
-        join_set.spawn(reddit::async_client::get_post_images(post));
+    for item in items {
+        if let reddit::api::UserItem::Post(post) = item {
+            join_set.spawn(reddit::async_client::get_post_images(post));
+        }
     }
 
     while let Some(res) = join_set.join_next().await {

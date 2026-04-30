@@ -5,6 +5,7 @@ use serde::Deserialize;
 #[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize)]
 pub enum DataType {
+    t1,
     t3,
     t5,
 }

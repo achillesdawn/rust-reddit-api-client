@@ -1,15 +1,24 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+mod comment;
 pub mod enums;
 mod post;
 mod profile;
 mod subreddit;
 
+pub use comment::Comment;
 pub use enums::DataType;
 pub use post::Post;
 pub use profile::Profile;
 pub use subreddit::Subreddit;
+
+#[derive(Debug, serde::Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum UserItem {
+    Post(Box<Post>),
+    Comment(Box<Comment>),
+}
 
 #[derive(Debug, Deserialize)]
 pub enum EndpointType {
