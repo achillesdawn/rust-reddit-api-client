@@ -1,3 +1,4 @@
+use crate::api::enums::SubredditSortType;
 use crate::api::{ApiResponse, BASE_URL, Kind};
 use crate::{
     api::{RedditApiResponse, Subreddit},
@@ -6,6 +7,14 @@ use crate::{
 use eyre::Context;
 use reqwest::Method;
 use serde_json::Value;
+
+fn create_subreddit_url(subreddit: &str, sort_type: SubredditSortType) -> url::Url {
+    let mut url = BASE_URL
+        .join(&format!("/r/{subreddit}/{sort_type}"))
+        .expect("could not create url");
+
+    todo!()
+}
 
 impl Reddit {
     pub async fn subreddit_about(&mut self, subreddit: &str) -> eyre::Result<Subreddit> {

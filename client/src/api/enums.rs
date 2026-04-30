@@ -54,6 +54,26 @@ impl Display for SortType {
     }
 }
 
+pub enum SubredditSortType {
+    Hot,
+    New,
+    Rising,
+    Top,
+    Controversial,
+}
+
+impl Display for SubredditSortType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SubredditSortType::Hot => write!(f, "hot"),
+            SubredditSortType::New => write!(f, "new"),
+            SubredditSortType::Rising => write!(f, "rising"),
+            SubredditSortType::Top => write!(f, "top"),
+            SubredditSortType::Controversial => write!(f, "controversial"),
+        }
+    }
+}
+
 pub enum Endpoint {
     Overview,
     Submitted,
