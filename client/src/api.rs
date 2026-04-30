@@ -72,3 +72,26 @@ pub enum Kind {
     #[serde(rename = "t5")]
     Profile(Box<Profile>),
 }
+
+impl Kind {
+    pub fn as_comment(&self) -> Option<&Comment> {
+        match self {
+            Kind::Comment(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    pub fn as_post(&self) -> Option<&Post> {
+        match self {
+            Kind::Post(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    pub fn as_profile(&self) -> Option<&Profile> {
+        match self {
+            Kind::Profile(c) => Some(c),
+            _ => None,
+        }
+    }
+}

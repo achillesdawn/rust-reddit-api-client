@@ -262,6 +262,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_subreddit_posts_all() -> Result<()> {
+        let mut client = Reddit::new().await?;
+
+        let result = client
+            .subreddit_posts(
+                "selfhosted",
+                SubredditSortType::Top,
+                Some(SortTime::Month),
+                Some(250),
+            )
+            .await?;
+
+        dbg!(&result);
+
+        dbg!(result.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_subreddit_about() -> Result<()> {
         let mut client = Reddit::new().await?;
 
