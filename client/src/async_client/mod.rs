@@ -1,7 +1,7 @@
 use eyre::Context;
 use reqwest::{Client, Method};
 
-use crate::api::{Profile, RedditApiResponse};
+use crate::api::{ApiResponse, Kind};
 
 mod auth;
 mod download;
@@ -94,32 +94,80 @@ impl Reddit {
         Ok(data)
     }
 
-    pub async fn following(&mut self) -> eyre::Result<Vec<Profile>> {
-        let mut url = self
-            .base_url
-            .join("/subreddits/mine/subscriber")
-            .wrap_err("could not create url")?;
-
-        url.query_pairs_mut()
-            .extend_pairs([("limit", "100"), ("show", "all")])
-            .finish();
-
+    async fn collect_pages(
+        &mut self,
+        url: url::Url,
+        limit: Option<usize>,
+    ) -> eyre::Result<Vec<Kind>> {
         let mut results = Vec::new();
+        let mut after: Option<String> = None;
 
         loop {
-            let req = reqwest::Request::new(Method::GET, url.clone());
+            let url = {
+                let mut url = url.clone();
+                if let Some(after) = after {
+                    url.query_pairs_mut().append_pair("after", &after);
+                }
+                url
+            };
 
-            let data: RedditApiResponse<Profile> = self.request_and_deserialize(req).await?;
+            let req = reqwest::Request::new(Method::GET, url);
 
-            results.extend(data.data.children.into_iter().map(|child| child.data));
+            let data: ApiResponse = self.request_and_deserialize(req).await?;
 
-            if let Some(after) = data.data.after {
-                url.query_pairs_mut().append_pair("after", &after).finish();
+            results.extend(data.data.children);
+
+            if let Some(next_after) = data.data.after {
+                if let Some(limit) = limit
+                    && results.len() >= limit
+                {
+                    break;
+                }
+                after = Some(next_after);
             } else {
                 break;
             }
         }
 
         Ok(results)
+    }
+
+    pub async fn following(&mut self, limit: Option<usize>) -> eyre::Result<Vec<Kind>> {
+        let url = {
+            let mut url = self
+                .base_url
+                .join("/subreddits/mine/subscriber")
+                .wrap_err("could not create url")?;
+
+            url.query_pairs_mut().extend_pairs([("show", "all")]);
+
+            if let Some(limit) = limit {
+                url.query_pairs_mut()
+                    .append_pair("limit", &limit.to_string());
+            }
+
+            url
+        };
+
+        self.collect_pages(url, limit).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_following() -> eyre::Result<()> {
+        tracing_subscriber::fmt().init();
+
+        let mut client = Reddit::new().await?;
+
+        let following = client.following(Some(110)).await?;
+
+        dbg!(following);
+
+        Ok(())
     }
 }

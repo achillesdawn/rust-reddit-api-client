@@ -2,7 +2,7 @@ use reqwest::Method;
 use url::Url;
 
 use crate::api::{
-    ApiResponse, Kind, RedditApiResponse,
+    ApiResponse, Kind,
     enums::{Endpoint, SortTime, SortType},
 };
 
@@ -65,36 +65,7 @@ impl super::Reddit {
     ) -> eyre::Result<Vec<Kind>> {
         let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
 
-        let mut posts = Vec::new();
-        let mut after: Option<String> = None;
-
-        loop {
-            let mut request_url = url.clone();
-
-            if let Some(after) = after {
-                request_url.query_pairs_mut().append_pair("after", &after);
-            }
-
-            let req = reqwest::Request::new(Method::GET, url.clone());
-
-            let data: RedditApiResponse<Kind> = self.request_and_deserialize(req).await?;
-
-            posts.extend(data.data.children.into_iter().map(|child| child.data));
-
-            if let Some(new_after) = data.data.after {
-                if let Some(limit) = limit
-                    && posts.len() >= limit
-                {
-                    break;
-                }
-
-                after = Some(new_after)
-            } else {
-                break;
-            }
-        }
-
-        Ok(posts)
+        self.collect_pages(url, limit).await
     }
 }
 

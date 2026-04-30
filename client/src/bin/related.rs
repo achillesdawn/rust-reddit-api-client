@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use reddit::async_client::Reddit;
 use tracing::error;
 
@@ -11,7 +9,7 @@ async fn main_async() -> eyre::Result<()> {
     let users = posts.iter().map(|p| p.author.as_str()).collect::<Vec<_>>();
 
     for user in users.into_iter() {
-        if let Ok(items) = client
+        if let Ok(_items) = client
             .user_latest(
                 user,
                 reddit::api::enums::Endpoint::Submitted,

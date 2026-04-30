@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Profile {
     pub accept_followers: bool,
     // pub accounts_active: Value,
@@ -26,7 +26,7 @@ pub struct Profile {
     pub can_assign_link_flair: bool,
     pub can_assign_user_flair: bool,
     pub collapse_deleted_comments: bool,
-    pub comment_contribution_settings: CommentContributionSettings,
+    // pub comment_contribution_settings: CommentContributionSettings,
     pub comment_score_hide_mins: i64,
     pub community_icon: String,
     pub community_reviewed: bool,
@@ -107,10 +107,4 @@ pub struct Profile {
     pub wiki_enabled: Option<bool>,
     pub wls: Option<i64>,
     pub videostream_links_count: Option<i64>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CommentContributionSettings {
-    #[serde(default)]
-    pub allowed_media_types: Option<Vec<String>>,
 }

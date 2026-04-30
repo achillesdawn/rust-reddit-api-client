@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use serde_json::Value;
 
 mod comment;
 pub mod enums;
@@ -31,7 +30,7 @@ pub struct PagingData<T> {
     pub children: Vec<Child<T>>,
     pub dist: u32,
     pub geo_filter: String,
-    pub modhash: String,
+    // pub modhash: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,15 +52,18 @@ pub struct PagedResponse {
     pub children: Vec<Kind>,
     pub dist: u32,
     pub geo_filter: String,
-    pub modhash: Option<String>,
+    // pub modhash: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize, Deserialize, Clone)]
 #[serde(tag = "kind", content = "data")]
 pub enum Kind {
+    #[serde(rename = "t1")]
+    Comment(Box<Comment>),
+
     #[serde(rename = "t3")]
     Post(Box<Post>),
 
-    #[serde(rename = "t1")]
-    Comment(Box<Comment>),
+    #[serde(rename = "t5")]
+    Profile(Box<Profile>),
 }
