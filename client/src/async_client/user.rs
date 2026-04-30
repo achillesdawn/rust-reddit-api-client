@@ -2,7 +2,7 @@ use reqwest::Method;
 use url::Url;
 
 use crate::api::{
-    RedditApiResponse, UserItem,
+    Kind, RedditApiResponse, RedditApiResponseT,
     enums::{Endpoint, SortTime, SortType},
 };
 
@@ -47,14 +47,12 @@ impl super::Reddit {
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> eyre::Result<Vec<UserItem>> {
+    ) -> eyre::Result<RedditApiResponseT> {
         let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
 
         let req = reqwest::Request::new(Method::GET, url);
 
-        let data: RedditApiResponse<UserItem> = self.request_and_deserialize(req).await?;
-
-        Ok(data.data.children.into_iter().map(|a| a.data).collect())
+        self.request_and_deserialize(req).await
     }
 
     pub async fn user(
@@ -64,7 +62,7 @@ impl super::Reddit {
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> eyre::Result<Vec<UserItem>> {
+    ) -> eyre::Result<Vec<Kind>> {
         let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
 
         let mut posts = Vec::new();
@@ -79,18 +77,18 @@ impl super::Reddit {
 
             let req = reqwest::Request::new(Method::GET, url.clone());
 
-            let data: RedditApiResponse<UserItem> = self.request_and_deserialize(req).await?;
+            let data: RedditApiResponse<Kind> = self.request_and_deserialize(req).await?;
 
             posts.extend(data.data.children.into_iter().map(|child| child.data));
 
-            if data.data.after.is_null() {
+            if data.data.after.is_none() {
                 break;
             } else if let Some(limit) = limit
                 && posts.len() >= limit
             {
                 break;
             } else {
-                after = Some(data.data.after.as_str().unwrap().to_owned());
+                after = Some(data.data.after.unwrap().as_str().to_owned());
             }
         }
 
@@ -113,17 +111,14 @@ mod tests {
         let items = client
             .user_latest(
                 "e_o_raul",
-                crate::api::enums::Endpoint::Comments,
+                crate::api::enums::Endpoint::Submitted,
                 crate::api::enums::SortType::Top,
                 Some(crate::api::enums::SortTime::All),
-                None,
+                Some(10),
             )
             .await?;
 
-        for item in items {
-            dbg!(item);
-        }
-
+        dbg!(items);
         Ok(())
     }
 

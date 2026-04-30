@@ -65,15 +65,14 @@ impl Reddit {
 
             posts.extend(data.data.children.into_iter().map(|child| child.data));
 
-            if data.data.after.is_null() {
-                break;
-            } else {
-                let after = data.data.after.as_str().unwrap().to_owned();
+            if let Some(after) = data.data.after {
                 url.query_pairs_mut()
                     .clear()
                     .extend_pairs(query)
                     .append_pair("after", &after)
                     .finish();
+            } else {
+                break;
             }
         }
 

@@ -73,6 +73,10 @@ impl Reddit {
     {
         let b = self.handle_request(req).await?;
 
+        let s = std::str::from_utf8(&b).unwrap();
+
+        dbg!(s);
+
         let deserializer = &mut serde_json::Deserializer::from_slice(&b);
 
         let data: T = match serde_path_to_error::deserialize(deserializer) {
@@ -109,11 +113,10 @@ impl Reddit {
 
             results.extend(data.data.children.into_iter().map(|child| child.data));
 
-            if data.data.after.is_null() {
-                break;
-            } else {
-                let after = data.data.after.as_str().unwrap().to_owned();
+            if let Some(after) = data.data.after {
                 url.query_pairs_mut().append_pair("after", &after).finish();
+            } else {
+                break;
             }
         }
 
