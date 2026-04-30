@@ -1,44 +1,42 @@
 use reqwest::Method;
 
 use crate::api::{
-    ApiResponse, Kind,
+    ApiResponse, BASE_URL, Kind,
     enums::{Endpoint, SortTime, SortType},
 };
 
-impl super::Reddit {
-    fn create_endpoint_url(
-        &self,
-        username: &str,
-        endpoint: Endpoint,
-        sort: SortType,
-        sort_time: Option<SortTime>,
-        limit: Option<usize>,
-    ) -> url::Url {
-        let mut url = self
-            .base_url
-            .join(&format!("/user/{username}/{endpoint}"))
-            .expect("could not create url");
+fn create_endpoint_url(
+    username: &str,
+    endpoint: Endpoint,
+    sort: SortType,
+    sort_time: Option<SortTime>,
+    limit: Option<usize>,
+) -> url::Url {
+    let mut url = BASE_URL
+        .join(&format!("/user/{username}/{endpoint}"))
+        .expect("could not create url");
 
-        let limit = limit.map(|i| i.to_string()).unwrap_or("100".to_owned());
+    let limit = limit.map(|i| i.to_string()).unwrap_or("100".to_owned());
 
-        if let Some(sort) = sort_time {
-            url.query_pairs_mut().append_pair("t", &sort.to_string());
-        }
-
-        url.query_pairs_mut()
-            .extend_pairs([
-                ("context", "2"),
-                ("show", "given"),
-                ("sort", &sort.to_string()),
-                ("type", "links"),
-                ("limit", limit.as_str()),
-                ("raw_json", "1"),
-            ])
-            .finish();
-
-        url
+    if let Some(sort) = sort_time {
+        url.query_pairs_mut().append_pair("t", &sort.to_string());
     }
 
+    url.query_pairs_mut()
+        .extend_pairs([
+            ("context", "2"),
+            ("show", "given"),
+            ("sort", &sort.to_string()),
+            ("type", "links"),
+            ("limit", limit.as_str()),
+            ("raw_json", "1"),
+        ])
+        .finish();
+
+    url
+}
+
+impl super::Reddit {
     pub async fn user_latest(
         &mut self,
         username: &str,
@@ -47,7 +45,7 @@ impl super::Reddit {
         sort_time: Option<SortTime>,
         limit: Option<usize>,
     ) -> eyre::Result<ApiResponse> {
-        let url = self.create_endpoint_url(username, endpoint, sort, sort_time, limit);
+        let url = create_endpoint_url(username, endpoint, sort, sort_time, limit);
 
         let req = reqwest::Request::new(Method::GET, url);
 
@@ -62,7 +60,7 @@ impl super::Reddit {
         sort_time: Option<SortTime>,
         limit: Option<usize>,
     ) -> eyre::Result<Vec<Kind>> {
-        let url = self.create_endpoint_url(username, endpoint, sort, sort_time, limit);
+        let url = create_endpoint_url(username, endpoint, sort, sort_time, limit);
 
         self.paginated(url, limit).await
     }

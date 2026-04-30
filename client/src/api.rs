@@ -1,4 +1,9 @@
 use serde::Deserialize;
+use std::sync::LazyLock;
+use url::Url;
+
+pub static BASE_URL: LazyLock<Url> =
+    LazyLock::new(|| Url::parse("https://oauth.reddit.com").expect("invalid base url"));
 
 mod comment;
 pub mod enums;

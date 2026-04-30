@@ -1,12 +1,11 @@
 use eyre::Context;
 
-use crate::api::Kind;
+use crate::api::{Kind, BASE_URL};
 
 impl super::Reddit {
     pub async fn following(&mut self, limit: Option<usize>) -> eyre::Result<Vec<Kind>> {
         let url = {
-            let mut url = self
-                .base_url
+            let mut url = BASE_URL
                 .join("/subreddits/mine/subscriber")
                 .wrap_err("could not create url")?;
 

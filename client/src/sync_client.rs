@@ -1,8 +1,9 @@
 
+use crate::api::BASE_URL;
+
 struct Reddit {
     headers: HashMap<String, String>,
     token: Token,
-    base_url: String,
 }
 
 impl Reddit {
@@ -19,8 +20,6 @@ impl Reddit {
         Reddit {
             headers,
             token: Token::new(),
-
-            base_url: "https://oauth.reddit.com".to_owned(),
         }
     }
 
@@ -81,7 +80,7 @@ impl Reddit {
     fn user_profile(&self, username: String) -> Result<Vec<Post>, RedditError> {
         let url = format!("/user/{username}/submitted");
 
-        let full_url = self.base_url.clone() + &url;
+        let full_url = BASE_URL.as_str().to_owned() + &url;
 
         let mut result = Vec::new();
 
@@ -130,7 +129,7 @@ impl Reddit {
 
     fn subreddit(&self, subreddit_name: &str) -> Result<(), RedditError> {
         let url = format!("/r/{subreddit_name}/new");
-        let full_url = self.base_url.clone() + &url;
+        let full_url = BASE_URL.as_str().to_owned() + &url;
 
         let req = self.new_request(full_url, HttpVerb::GET);
 
@@ -155,7 +154,7 @@ impl Reddit {
 
     fn following(&self) -> Result<(), RedditError> {
         let url = format!("/subreddits/mine/subscriber");
-        let full_url = self.base_url.clone() + &url;
+        let full_url = BASE_URL.as_str().to_owned() + &url;
 
         let query: HashMap<String, String> = HashMap::from([
             ("limit".to_owned(), "100".to_owned()),

@@ -17,7 +17,6 @@ use token::Token;
 
 pub struct Reddit {
     token: Token,
-    base_url: url::Url,
     client: Client,
 
     timer: tokio::time::Interval,
@@ -45,7 +44,6 @@ impl Reddit {
         Ok(Reddit {
             token,
             client,
-            base_url: url::Url::parse("https://oauth.reddit.com").expect("could no parse base url"),
             timer,
         })
     }

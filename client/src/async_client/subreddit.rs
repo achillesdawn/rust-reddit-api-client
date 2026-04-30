@@ -1,5 +1,4 @@
-use crate::api::enums::{Endpoint, SortTime, SortType};
-use crate::api::{ApiResponse, Kind};
+use crate::api::{ApiResponse, BASE_URL, Kind};
 use crate::{
     api::{RedditApiResponse, Subreddit},
     async_client::Reddit,
@@ -10,8 +9,7 @@ use serde_json::Value;
 
 impl Reddit {
     pub async fn subreddit_about(&mut self, subreddit: &str) -> eyre::Result<Subreddit> {
-        let url = self
-            .base_url
+        let url = BASE_URL
             .join(&format!("/r/{}/about", subreddit))
             .wrap_err("could not create url")?;
 
@@ -46,8 +44,7 @@ impl Reddit {
         subreddit_name: &str,
         limit: Option<usize>,
     ) -> eyre::Result<Vec<Kind>> {
-        let mut url = self
-            .base_url
+        let mut url = BASE_URL
             .join(&format!("/r/{subreddit_name}/new"))
             .wrap_err("could not create url")?;
 
@@ -63,8 +60,7 @@ impl Reddit {
         query: &str,
         limit: Option<u32>,
     ) -> eyre::Result<Vec<Subreddit>> {
-        let mut url = self
-            .base_url
+        let mut url = BASE_URL
             .join("/subreddits/search")
             .wrap_err("could not create url")?;
 
@@ -88,8 +84,7 @@ impl Reddit {
 
     // return a list of 10 autocomplete subreddit suggestions
     pub async fn autocomplete_subreddits(&mut self, query: &str) -> eyre::Result<Vec<Subreddit>> {
-        let mut url = self
-            .base_url
+        let mut url = BASE_URL
             .join("/api/subreddit_autocomplete_v2")
             .wrap_err("could not create url")?;
 
@@ -115,8 +110,7 @@ impl Reddit {
     }
 
     pub async fn search_reddit_names(&mut self, query: &str) -> eyre::Result<Vec<String>> {
-        let mut url = self
-            .base_url
+        let mut url = BASE_URL
             .join("/api/search_reddit_names")
             .wrap_err("could not create url")?;
 
@@ -145,8 +139,7 @@ impl Reddit {
     }
 
     pub async fn subreddits_popular(&mut self, limit: Option<u32>) -> eyre::Result<Vec<Subreddit>> {
-        let mut url = self
-            .base_url
+        let mut url = BASE_URL
             .join("/subreddits/popular")
             .wrap_err("could not create url")?;
 
