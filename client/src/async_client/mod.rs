@@ -7,6 +7,7 @@ mod auth;
 mod download;
 mod gif_client;
 mod image_client;
+mod profile;
 mod subreddit;
 mod token;
 mod user;
@@ -73,9 +74,8 @@ impl Reddit {
     {
         let b = self.handle_request(req).await?;
 
-        let s = std::str::from_utf8(&b).unwrap();
-
-        dbg!(s);
+        // let s = std::str::from_utf8(&b).unwrap();
+        // dbg!(s);
 
         let deserializer = &mut serde_json::Deserializer::from_slice(&b);
 
@@ -94,11 +94,7 @@ impl Reddit {
         Ok(data)
     }
 
-    async fn collect_pages(
-        &mut self,
-        url: url::Url,
-        limit: Option<usize>,
-    ) -> eyre::Result<Vec<Kind>> {
+    async fn paginated(&mut self, url: url::Url, limit: Option<usize>) -> eyre::Result<Vec<Kind>> {
         let mut results = Vec::new();
         let mut after: Option<String> = None;
 
@@ -130,44 +126,5 @@ impl Reddit {
         }
 
         Ok(results)
-    }
-
-    pub async fn following(&mut self, limit: Option<usize>) -> eyre::Result<Vec<Kind>> {
-        let url = {
-            let mut url = self
-                .base_url
-                .join("/subreddits/mine/subscriber")
-                .wrap_err("could not create url")?;
-
-            url.query_pairs_mut().extend_pairs([("show", "all")]);
-
-            if let Some(limit) = limit {
-                url.query_pairs_mut()
-                    .append_pair("limit", &limit.to_string());
-            }
-
-            url
-        };
-
-        self.collect_pages(url, limit).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_following() -> eyre::Result<()> {
-        tracing_subscriber::fmt().init();
-
-        let mut client = Reddit::new().await?;
-
-        let following = client.following(Some(110)).await?;
-
-        dbg!(following);
-
-        Ok(())
     }
 }

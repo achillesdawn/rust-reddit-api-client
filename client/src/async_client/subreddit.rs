@@ -1,4 +1,5 @@
-use crate::api::Post;
+use crate::api::enums::{Endpoint, SortTime, SortType};
+use crate::api::{ApiResponse, Kind};
 use crate::{
     api::{RedditApiResponse, Subreddit},
     async_client::Reddit,
@@ -21,32 +22,30 @@ impl Reddit {
         Ok(data.data)
     }
 
-    pub async fn subreddit_posts_latest(
+    // fn create_subreddit_url() -> url::Url {}
+
+    // pub async fn subreddit_posts_latest(
+    //     &mut self,
+    //     subreddit_name: &str,
+    //     endpoint: Endpoint,
+    //     sort: SortType,
+    //     sort_time: Option<SortTime>,
+    //     limit: Option<usize>,
+    // ) -> eyre::Result<Vec<Kind>> {
+    //     // let url = self.create_endpoint_url("r", su, endpoint, sort, sort_time, limit);
+
+    //     let req = reqwest::Request::new(Method::GET, url);
+
+    //     let data: ApiResponse = self.request_and_deserialize(req).await?;
+
+    //     Ok(data.data.children)
+    // }
+
+    pub async fn subreddit_posts(
         &mut self,
         subreddit_name: &str,
-    ) -> eyre::Result<Vec<Post>> {
-        let mut url = self
-            .base_url
-            .join(&format!("/r/{subreddit_name}/new"))
-            .wrap_err("could not create url")?;
-
-        url.query_pairs_mut()
-            .extend_pairs([("limit", "100"), ("show", "all"), ("raw_json", "1")])
-            .finish();
-
-        let req = reqwest::Request::new(Method::GET, url);
-
-        let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
-
-        Ok(data
-            .data
-            .children
-            .into_iter()
-            .map(|child| child.data)
-            .collect())
-    }
-
-    pub async fn subreddit_posts(&mut self, subreddit_name: &str) -> eyre::Result<Vec<Post>> {
+        limit: Option<usize>,
+    ) -> eyre::Result<Vec<Kind>> {
         let mut url = self
             .base_url
             .join(&format!("/r/{subreddit_name}/new"))
@@ -56,27 +55,7 @@ impl Reddit {
 
         url.query_pairs_mut().extend_pairs(query).finish();
 
-        let mut posts = Vec::new();
-
-        loop {
-            let req = reqwest::Request::new(Method::GET, url.clone());
-
-            let data: RedditApiResponse<Post> = self.request_and_deserialize(req).await?;
-
-            posts.extend(data.data.children.into_iter().map(|child| child.data));
-
-            if let Some(after) = data.data.after {
-                url.query_pairs_mut()
-                    .clear()
-                    .extend_pairs(query)
-                    .append_pair("after", &after)
-                    .finish();
-            } else {
-                break;
-            }
-        }
-
-        Ok(posts)
+        self.paginated(url, limit).await
     }
 
     pub async fn search_subreddits(
@@ -172,7 +151,8 @@ impl Reddit {
             .wrap_err("could not create url")?;
 
         if let Some(n) = limit {
-            url.query_pairs_mut().append_pair("limit", &n.to_string());
+            url.query_pairs_mut()
+                .extend_pairs([("limit", n.to_string().as_str()), ("raw_json", "1")]);
         }
 
         let req = reqwest::Request::new(Method::GET, url);
@@ -253,18 +233,16 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_subreddit_posts_latest() -> Result<()> {
-        let mut client = Reddit::new().await?;
+    // #[tokio::test]
+    // async fn test_subreddit_posts_latest() -> Result<()> {
+    //     let mut client = Reddit::new().await?;
 
-        let result = client.subreddit_posts_latest("selfhosted").await?;
+    //     let result = client.subreddit_posts_latest("selfhosted").await?;
 
-        result.iter().for_each(|i| {
-            println!("{} - {}", i.title, i.author);
-        });
+    //     dbg!(result);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     #[tokio::test]
     async fn test_subreddit_about() -> Result<()> {

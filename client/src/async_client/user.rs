@@ -1,5 +1,4 @@
 use reqwest::Method;
-use url::Url;
 
 use crate::api::{
     ApiResponse, Kind,
@@ -7,14 +6,14 @@ use crate::api::{
 };
 
 impl super::Reddit {
-    fn create_user_url(
+    fn create_endpoint_url(
         &self,
         username: &str,
         endpoint: Endpoint,
         sort: SortType,
         sort_time: Option<SortTime>,
         limit: Option<usize>,
-    ) -> Url {
+    ) -> url::Url {
         let mut url = self
             .base_url
             .join(&format!("/user/{username}/{endpoint}"))
@@ -48,7 +47,7 @@ impl super::Reddit {
         sort_time: Option<SortTime>,
         limit: Option<usize>,
     ) -> eyre::Result<ApiResponse> {
-        let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
+        let url = self.create_endpoint_url(username, endpoint, sort, sort_time, limit);
 
         let req = reqwest::Request::new(Method::GET, url);
 
@@ -63,9 +62,9 @@ impl super::Reddit {
         sort_time: Option<SortTime>,
         limit: Option<usize>,
     ) -> eyre::Result<Vec<Kind>> {
-        let url = self.create_user_url(username, endpoint, sort, sort_time, limit);
+        let url = self.create_endpoint_url(username, endpoint, sort, sort_time, limit);
 
-        self.collect_pages(url, limit).await
+        self.paginated(url, limit).await
     }
 }
 
